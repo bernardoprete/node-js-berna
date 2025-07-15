@@ -1,0 +1,34 @@
+[
+  {
+    "id": 144,
+    "nombre": "Lucía Gomez",
+    "edad": 25
+  },
+  {
+    "id": 544,
+    "nombre": "Rodrigo Diaz",
+    "edad": 37
+  },
+  {
+    "id": 339,
+    "nombre": "Romina Rodriguez",
+    "edad": 32
+  },
+  {
+    "id": 1,
+    "nombre": "Selene Prete Pavlotsky",
+    "edad": 28
+  },
+  {
+    "nombre": "Lucía Gomez",
+    "edad": 32
+  },
+  {
+    "nombre": "juan",
+    "edad": 32
+  },
+  {
+    "nombre": "Ricardo",
+    "edad": 32
+  }
+]
