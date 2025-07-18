@@ -3,11 +3,15 @@ import {
   deleteUsuario,
   findUsuario,
   getUsuarios,
+  loginUsuario,
+  logoutUsuario,
   postUsuario,
   putUsuario,
+  registrarUsuario,
+  verificarUsuarioLogeado, //IMPORTANTE IMPORTAR TODAS LAS FUNCIONES
 } from "../controllers/usuarios.controller.js";
 import {
-  validarDatosUsuario,
+  validarDatosUsuario, // IMPORTANTE IMPORTAR TODOS LOS MIDDLEWARES.
   validarID,
 } from "../middlewares/usuarios.middleware.js";
 
@@ -34,5 +38,17 @@ router.put("/usuarios/:id", validarDatosUsuario, validarID, putUsuario);
 
 // BORRAR UN USUARIO (DELETE)
 router.delete("/usuarios/:id", deleteUsuario);
+
+// REGISTRO DE USUARIO - PRIMERA VEZ
+router.post("/usuarios/register", registrarUsuario);
+
+// LOGIN DE USUARIO -
+router.post("/usuarios/login", loginUsuario);
+
+// LOGOUT DE USUARIO
+router.post("/usuarios/logout", logoutUsuario);
+
+// LOGOUT DE USUARIO
+router.post("/usuarios/verificar", verificarUsuarioLogeado);
 
 export default router;

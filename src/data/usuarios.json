@@ -1,34 +1,26 @@
 [
   {
-    "id": 144,
-    "nombre": "Lucía Gomez",
-    "edad": 25
+    "id": 323.5730211625244,
+    "nombre": "Juan Perez",
+    "edad": 32,
+    "email": "juan@gmail.com",
+    "password": "$2b$10$LA3dlJmBRi1KKfGXo7V5re6mKQNR2u3.gf9Ne1PmHTzzyKlKgJZ42",
+    "rol": "cliente"
   },
   {
-    "id": 544,
-    "nombre": "Rodrigo Diaz",
-    "edad": 37
+    "id": 516.3305201002745,
+    "nombre": "Lucía Gómez",
+    "edad": 28,
+    "email": "lucia@gmail.com",
+    "password": "$2b$10$LRSMoOCbGfOwkxJS.sqDT.ANR6xL7z7j6IPuK2nELQyda68PI/NPe",
+    "rol": "user"
   },
   {
-    "id": 339,
-    "nombre": "Romina Rodriguez",
-    "edad": 32
-  },
-  {
-    "id": 1,
-    "nombre": "Selene Prete Pavlotsky",
-    "edad": 28
-  },
-  {
-    "nombre": "Lucía Gomez",
-    "edad": 32
-  },
-  {
-    "nombre": "juan",
-    "edad": 32
-  },
-  {
-    "nombre": "Ricardo",
-    "edad": 32
+    "id": 504.06395459949084,
+    "nombre": "Carlos Pérez",
+    "edad": "23",
+    "email": "carlos@example.com",
+    "password": "$2b$10$KWZbJ2S8wQLj3Lrp60mjgu/zWB4oykOa8TZtOn2JtieqMnB.QmAMS",
+    "rol": "usuario"
   }
 ]
