@@ -21,7 +21,7 @@ const pathArchivoUsuarios = path.join(__dirname, "..", "data", "usuarios.json");
 //VER USUARIOS (GET)
 export const getUsuarios = async (req, res, next) => {
   const limit = req.query.limit;
-  console.log(limit);
+
   let listadoUsuarios; // Inicialmente la dejo vacia
 
   try {
@@ -68,37 +68,67 @@ export const findUsuario = async (req, res) => {
   }
 };
 
-// CREAR UN USUARIO (POST)
+// CREAR UN USUARIO (POST) LO deberia crear solo el administrador en el panel de administracion.
 
-export const postUsuario = async (req, res) => {
-  const { nombre, edad } = req.body;
+export const crearUsuarioComoAdmin = async (req, res) => {
+  const { nombre, edad, email, password, rol } = req.body;
+
   try {
+    //Validar el rol que me llega en body - Solo puede ser user o admin
+    const rolValido = rol === "usuario" || rol === "admin";
+
+    if (!rolValido) {
+      return res.status(400).json({ message: "Rol inválido" });
+    }
+
     const listadoUsuarios = JSON.parse(
       await fs.readFile(pathArchivoUsuarios, "utf8")
     );
-    const nuevoUsuario = { nombre, edad };
+
+    const usuarioExistente = listadoUsuarios.find(
+      (usuario) => usuario.email === email
+    );
+    if (usuarioExistente)
+      return res //Uso el return para cortar y mandar el mensaje
+        .status(400)
+        .json({ message: "El email ingresado ya se encuentra registrado." }); //Todo esto es en una linea por eso el if esta sin llave
+
+    // Si el usuario no existe passamos a hashear la contraseña para incorporarla a la bd o en este caso al archivo pero hasheada.                                                                                                                                           iste hay que hashear la password - IMPORTANTE
+    const hashPassword = await bcrypt.hash(password, 10); //USAMOS BCRYPT
+
+    const nuevoUsuario = {
+      //Cada propiedad son las constantes que cree arriba (linea 160) con la desestructuracion.
+      id: Math.random() * 1000 + 1, // La BD lo pone de manera automatica.
+      nombre,
+      edad,
+      email,
+      password: hashPassword, // Me llega por el body.req pero la hasheo.
+      rol: rol, //Ya esta validado previamente
+    };
+
     /* 
       const nuevoUsuario = {nombre: nombre, edad: edad}
     */
-    listadoUsuarios.push(nuevoUsuario);
 
+    listadoUsuarios.push(nuevoUsuario);
+    //Aqui paso la lista de usuarios (array de objetos) a JSON nuevamente y lo "pego" en el archivo
     await fs.writeFile(
       pathArchivoUsuarios,
       JSON.stringify(listadoUsuarios, null, 2)
     );
 
-    res.status(200);
-    res.send(nuevoUsuario); // Modo en 2 lineas con res.send
+    res.status(200).json(nuevoUsuario); //Doy como respuesta el nuevo usuario
   } catch (error) {
     res.status(500).json(error.message); // En una linea envio el send y el status.
   }
 };
 
-// MODIFICAR UN USUARIO (PUT)
+// MODIFICAR UN USUARIO SIENDO ADMIN(PUT) -
 
-export const putUsuario = async (req, res) => {
+export const putUsuarioComoAdmin = async (req, res) => {
   const id = req.params.id;
-  const modificaciones = req.body;
+  const modificaciones = { ...req.body }; //IMP - Ahora tengo la copia del objeto req.body (lo hago para no modificar el objeto original y trabajar con mas seguridad)
+
   try {
     const listaUsuarios = JSON.parse(
       await fs.readFile(pathArchivoUsuarios, "utf8")
@@ -182,7 +212,7 @@ export const registrarUsuario = async (req, res) => {
       edad,
       email,
       password: hashPassword, // Me llega por el body.req pero la hasheo.
-      rol,
+      rol: "usuario",
     };
 
     listadoUsuarios.push(nuevoUsuario);
@@ -207,7 +237,7 @@ export const loginUsuario = async (req, res) => {
       await fs.readFile(pathArchivoUsuarios, "utf8") // Parseamos la lista de usuarios a array de objetos y la leemos.
     );
 
-    const usuario = listadoUsuarios.find((usuario) => usuario.email === email); //Buscamso con find que nos devuelve el objeto si algun mail coincide con el email ingresado por el usuario (o username).
+    const usuario = listadoUsuarios.find((usuario) => usuario.email === email); //Buscamos con find que nos devuelve el objeto si algun mail coincide con el email ingresado por el usuario (o username).
     if (!usuario) return res.status(400).json({ message: "Email incorrecto." }); // Si el mail del usuario (podria ser tambien en otro caso el username) NO  esta en la bd o en la lista , damos la respuesta en JSON y cortamos con return.
     // SI EXISTE USUARIO EN LA BD O ARCHIVO:
     // a través de bcrypt es comparar las password (password plano + hash )
@@ -238,17 +268,81 @@ export const logoutUsuario = async (req, res) => {
   return res.sendStatus(200);
 };
 
-//USUARIO YA LOGUEADO ENTRA A LA APP
+//USUARIO YA LOGUEADO ENTRA A LA APP - Es cuando cerras el navegador y volves a abrilo sin cerrar sesion - Previamente pasa por el middleware que se fija si el token es valido y luego llega aca donde verificamos si ese token valido es de algun integrante del listado en la bd, lo hacemos mediante el id. Es para tenber mas seguridad.
 export const verificarUsuarioLogeado = async (req, res) => {
-  // extraer el token de la cookie. * Para poder acceder a una cookie necesito parsear.
-  const { token } = req.cookies; // es igual a const token = req.cookies.token
-
-  if (!token) res.status(401).json({ message: "El usuario no está logeado" }); // Si no hay token respondemos un estado 401 Unauthorized.
-  //Si hay token: Hay que verificar si el token es valido..
-  jwt.verify(token, JWT_SECRET, (err, data) => {
-    if (err) {
-      throw new Error("Error: token invalido.");
+  const { id, nombre, rol } = req.user;
+  // Una vez que el middleware de authRequired confirma que hay token y le asigna la data a una propiedad dentro de la peticion entonces:
+  // ..Hay que capturar esos datos que el middleware lleno con info del usuario mediante req.es como hice arriba y luego ver si ese ID que tengo es de algun usuario que deberia estar en la BD. (LO NORMAL ES QUE ESTE EN LA BD)
+  //Entonces:
+  try {
+    const listadoUsuarios = JSON.parse(
+      await fs.readFile(pathArchivoUsuarios, "utf8")
+    );
+    const usuarioValido = listadoUsuarios.find((usuario) => usuario.id === id);
+    if (!usuarioValido)
+      res
+        .status(401)
+        .json({ message: "El usuario no está registrado en nuestra BD." });
+    // Si esta registrado entonces :
+    res.status(200).json({ id: id, nombre: nombre, rol: rol }); // respondemos con un objeto
+  } catch (error) {
+    console.log(error);
+    if (error.name == "TokenExpiredError") {
+      return res
+        .status(401)
+        .json({ message: "No autorizado, el token ha expirado." });
+    } else if (error.name == "JsonWebTokenError") {
+      return res
+        .status(401)
+        .json({ message: "No autorizado, el token no es válido." });
+    } else if (error.name == "NotBeforeError") {
+      return res
+        .status(401)
+        .json({ message: "No autorizado, el token aún no es válido." });
     }
-    res.status(200).json(data); // La data tiene la info del usuario (rol, nombre, id)
-  });
+    res.status(500).json(error.message);
+  }
+};
+
+// MODIFICAR CONTRASEÑA SIENDO USER
+
+export const modificarPassword = async (req, res) => {
+  const { password, email, nuevapassword } = req.body;
+  const { id } = req.user;
+
+  try {
+    const listadoUsuarios = JSON.parse(
+      await fs.readFile(pathArchivoUsuarios, "utf8")
+    );
+
+    const passValida = await bcrypt.compare(password, usuarioValido.password); // el compare devuelve un TRUE o FALSE. Esta es la parte en la que en el front te piden ingresar tu vieja contraseña (para compararla con la que tenias vos y asi modificarla)
+    if (!passValida)
+      // Digo, si es false:
+      return res.status(400).json({ message: "Password incorrecto." });
+    //Si la password es valida hay que reemplazar la nueva contraseña por la anterior
+    const hashPassword = await bcrypt.hash(nuevapassword, 10); //USAMOS BCRYPT
+
+    // Buscar el índice del usuario
+    const indiceUsuario = listadoUsuarios.findIndex(
+      (usuario) => usuario.id === id
+    );
+
+    // Copiar todo el usuario y reemplazar solo el campo password
+    listadoUsuarios[indiceUsuario].password = hashPassword;
+    // Escribir "pegar" el archivo actualizado
+    await fs.writeFile(
+      pathArchivoUsuarios,
+      JSON.stringify(listadoUsuarios, null, 2)
+    );
+    res.status(200).json({ message: "Contraseña modificada con éxito." });
+
+    //Voy a crear un nuevo token solo por seguridad -- Podria no hacerlo IMPORTANTE - CUANDO SE CAMBIA LA PASSWORD PODEMOS BORRAR EL TOKEN OP CREAR UNO NUEVO - SUELDE DESLOGUEARSE.
+
+    const { id, nombre, rol } = listadoUsuarios[indiceUsuario]; //Tomo solo estas 3 propiedades porque son las basicas para saber cosas fundamentales del usuario y no son sensibles como la password ni email.
+    const data = { id, nombre, rol }; // CREO un nuevo objeto con 3 propiedades PARA GENERAR EL JWT (el token) ES IMPORTANTE SABER QUE ESTOS OBJETOS SE LLENAN CON LOS DATOS DE LAS VARIABLES CREADAS ARRIBA Y NO ESTAN VACIOS, ENTONCES ID = ID DEL USUARIO POR EJM Y ASI SUCESAIVAMENTE. (No almacenar datos sensibles).
+    const token = await crearTokenDeAcceso(data); // FUNCION QUE IMPORTO DE LA CARPETA LIBS/JWT.JS (IMPORTADO PARTE SUPERIOR) y le paso data como parametro.
+    res.cookie("token", token); // Esta línea crea una cookie (QUE REEMPLAZA A LA ANTERIOR) en el navegador del usuario llamada "token" y le asigna como valor el JWT que generamos. Así, en cada request futura, el navegador envía automáticamente esa cookie al servidor.
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
