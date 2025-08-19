@@ -1,6 +1,6 @@
 export const validarDatosUsuarioAlRegistrar = (req, res, next) => {
   // agregar la llegada de passwordConfirm -> compararlo con el password.
-  const { nombre, edad, email, password, paswordConfirm } = req.body;
+  const { nombre, edad, email, password, passwordConfirm } = req.body;
   try {
     if (
       !req.body ||
@@ -8,7 +8,7 @@ export const validarDatosUsuarioAlRegistrar = (req, res, next) => {
       !edad ||
       !email ||
       !password ||
-      !paswordConfirm // desestructurar el req.body y usar sus propiedades para validar
+      !passwordConfirm // desestructurar el req.body y usar sus propiedades para validar
     ) {
       throw new Error("No puede dejar campos vacíos.");
     }

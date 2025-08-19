@@ -1,1 +1,42 @@
-[{"id":806.9743124239296,"nombre":"Ana Torres","edad":35,"email":"ana.admin@example.com","password":"$2b$10$zCcQahs.EV/9A.7yukp/m.0NnClGC09j78rhUQm4cuNz5LwoR0f5G","rol":"admin"},{"id":288.47880096647526,"nombre":"Matías Fernández","edad":29,"email":"matias.cliente@example.com","password":"$2b$10$.NgSgpJPYVGpCJ3oyLgQme2DXp/UXQsglMJfZbK6q19Lt1IYHGyS.","rol":"cliente"},{"id":984.897106137813,"nombre":"Sofía Díaz","edad":26,"email":"sofia.user@example.com","password":"$2b$10$d0WAqgYjOyOIW1MiiQq1LOZ8IQL6fcBMeczznw.4J2P2boDZP4aU6","rol":"user"},{"id":823.085442291177,"nombre":"Matías Ferrari","edad":29,"email":"matiasferr.cliente@example.com","password":"$2b$10$dxsRq17SUSsBLvpckvfJB.wW4/bJPLBbL2kW3pMZypgveUrQzgyv6","rol":"cliente"},{"id":580.0756198203269,"nombre":"Juan Pérez","edad":30,"email":"juan.perez@example.com","password":"$2b$10$zrgh4LKx9oJJ4uHg5N8lWOAoVl5tjpehg2/2We8sRDIHjNpLi9FfG","rol":"admin"}]
+[
+  {
+    "id": 806.9743124239296,
+    "nombre": "Ana Torres",
+    "edad": 35,
+    "email": "ana.admin@example.com",
+    "password": "$2b$10$zCcQahs.EV/9A.7yukp/m.0NnClGC09j78rhUQm4cuNz5LwoR0f5G",
+    "rol": "admin"
+  },
+  {
+    "id": 288.47880096647526,
+    "nombre": "Matías Fernández",
+    "edad": 29,
+    "email": "matias.cliente@example.com",
+    "password": "$2b$10$.NgSgpJPYVGpCJ3oyLgQme2DXp/UXQsglMJfZbK6q19Lt1IYHGyS.",
+    "rol": "cliente"
+  },
+  {
+    "id": 984.897106137813,
+    "nombre": "Sofía Díaz",
+    "edad": 26,
+    "email": "sofia.user@example.com",
+    "password": "$2b$10$d0WAqgYjOyOIW1MiiQq1LOZ8IQL6fcBMeczznw.4J2P2boDZP4aU6",
+    "rol": "user"
+  },
+  {
+    "id": 823.085442291177,
+    "nombre": "Matías Ferrari",
+    "edad": 29,
+    "email": "matiasferr.cliente@example.com",
+    "password": "$2b$10$dxsRq17SUSsBLvpckvfJB.wW4/bJPLBbL2kW3pMZypgveUrQzgyv6",
+    "rol": "cliente"
+  },
+  {
+    "id": 580.0756198203269,
+    "nombre": "Juan Pérez",
+    "edad": 30,
+    "email": "juan.perez@example.com",
+    "password": "$2b$10$zrgh4LKx9oJJ4uHg5N8lWOAoVl5tjpehg2/2We8sRDIHjNpLi9FfG",
+    "rol": "admin"
+  }
+]
