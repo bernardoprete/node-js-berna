@@ -89,7 +89,6 @@ router.post(
 
 // LOGIN DE USUARIO -
 router.post("/usuarios/login", loginUsuario);
-
 // LOGOUT DE USUARIO
 router.post("/usuarios/logout", [authRequired], logoutUsuario);
 
