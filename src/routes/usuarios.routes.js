@@ -50,6 +50,14 @@ router.post(
   crearUsuarioComoAdmin
 );
 
+//MODIFICAR MI PASSWORD SIENDO ADMIN
+
+router.put(
+  "/usuarios/administrador/modificarpassword",
+  [authRequired, adminRequired],
+  modificarPassword
+);
+
 // MODIFICAR UN USUARIO COMO ADMIN(PUT)
 router.put(
   "/usuarios/administrador/:id",
@@ -62,7 +70,7 @@ router.put(
 router.put(
   "/usuarios/modificarpassword",
   [authRequired],
-  modificarPassword // DUDA (PARA MODIFICAR MI PASSWORD SIENDO USER)
+  modificarPassword // DUDA (PARA MODIFICAR MI PASSWORD SIENDO ADMIN)
 );
 
 // BORRAR UN USUARIO (DELETE)

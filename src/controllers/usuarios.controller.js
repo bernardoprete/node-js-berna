@@ -304,45 +304,47 @@ export const verificarUsuarioLogeado = async (req, res) => {
   }
 };
 
-// MODIFICAR CONTRASEÑA SIENDO USER
 
+// CAMBIAR PASSWORD SIENDO USUARIO
 export const modificarPassword = async (req, res) => {
-  const { password, email, nuevapassword } = req.body;
-  const { id } = req.user;
+  const { password, nuevapassword } = req.body; 
+  const { id } = req.user; // viene del token
 
   try {
     const listadoUsuarios = JSON.parse(
       await fs.readFile(pathArchivoUsuarios, "utf8")
     );
 
-    const passValida = await bcrypt.compare(password, usuarioValido.password); // el compare devuelve un TRUE o FALSE. Esta es la parte en la que en el front te piden ingresar tu vieja contraseña (para compararla con la que tenias vos y asi modificarla)
-    if (!passValida)
-      // Digo, si es false:
+    // Buscar al usuario logueado
+    const usuarioValido = listadoUsuarios.find((usuario) => usuario.id === id);
+    if (!usuarioValido) {
+      return res.status(404).json({ message: "Usuario no encontrado." });
+    }
+
+    // Comparar la contraseña actual ingresada con la guardada (hash)
+    const passValida = await bcrypt.compare(password, usuarioValido.password);
+    if (!passValida) {
       return res.status(400).json({ message: "Password incorrecto." });
-    //Si la password es valida hay que reemplazar la nueva contraseña por la anterior
-    const hashPassword = await bcrypt.hash(nuevapassword, 10); //USAMOS BCRYPT
+    }
 
-    // Buscar el índice del usuario
-    const indiceUsuario = listadoUsuarios.findIndex(
-      (usuario) => usuario.id === id
-    );
+    // Hashear la nueva contraseña y guardarla
+    const hashPassword = await bcrypt.hash(nuevapassword, 10);
+    usuarioValido.password = hashPassword;
 
-    // Copiar todo el usuario y reemplazar solo el campo password
-    listadoUsuarios[indiceUsuario].password = hashPassword;
-    // Escribir "pegar" el archivo actualizado
     await fs.writeFile(
       pathArchivoUsuarios,
       JSON.stringify(listadoUsuarios, null, 2)
     );
+
+    // Renovar token (opcional)
+    const { nombre, rol } = usuarioValido;
+    const data = { id, nombre, rol };
+    const token = await crearTokenDeAcceso(data);
+    res.cookie("token", token);
+
     res.status(200).json({ message: "Contraseña modificada con éxito." });
-
-    //Voy a crear un nuevo token solo por seguridad -- Podria no hacerlo IMPORTANTE - CUANDO SE CAMBIA LA PASSWORD PODEMOS BORRAR EL TOKEN OP CREAR UNO NUEVO - SUELDE DESLOGUEARSE.
-
-    const { id, nombre, rol } = listadoUsuarios[indiceUsuario]; //Tomo solo estas 3 propiedades porque son las basicas para saber cosas fundamentales del usuario y no son sensibles como la password ni email.
-    const data = { id, nombre, rol }; // CREO un nuevo objeto con 3 propiedades PARA GENERAR EL JWT (el token) ES IMPORTANTE SABER QUE ESTOS OBJETOS SE LLENAN CON LOS DATOS DE LAS VARIABLES CREADAS ARRIBA Y NO ESTAN VACIOS, ENTONCES ID = ID DEL USUARIO POR EJM Y ASI SUCESAIVAMENTE. (No almacenar datos sensibles).
-    const token = await crearTokenDeAcceso(data); // FUNCION QUE IMPORTO DE LA CARPETA LIBS/JWT.JS (IMPORTADO PARTE SUPERIOR) y le paso data como parametro.
-    res.cookie("token", token); // Esta línea crea una cookie (QUE REEMPLAZA A LA ANTERIOR) en el navegador del usuario llamada "token" y le asigna como valor el JWT que generamos. Así, en cada request futura, el navegador envía automáticamente esa cookie al servidor.
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
