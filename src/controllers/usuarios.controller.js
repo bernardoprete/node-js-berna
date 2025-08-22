@@ -304,10 +304,9 @@ export const verificarUsuarioLogeado = async (req, res) => {
   }
 };
 
-
 // CAMBIAR PASSWORD SIENDO USUARIO
 export const modificarPassword = async (req, res) => {
-  const { password, nuevapassword } = req.body; 
+  const { password, nuevapassword } = req.body;
   const { id } = req.user; // viene del token
 
   try {
@@ -347,4 +346,3 @@ export const modificarPassword = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
