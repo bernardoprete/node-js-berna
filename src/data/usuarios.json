@@ -1,13 +1,5 @@
 [
   {
-    "id": 806.9743124239296,
-    "nombre": "Ana Torres",
-    "edad": 35,
-    "email": "ana.admin@example.com",
-    "password": "$2b$10$QbCwsx3CZLfYNhiMNqxl5.cdZfJGrhm6BWdkCw8CGRP2RIeV67EB.",
-    "rol": "admin"
-  },
-  {
     "id": 288.47880096647526,
     "nombre": "Matías Fernández",
     "edad": 29,

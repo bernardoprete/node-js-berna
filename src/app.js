@@ -1,11 +1,15 @@
-
+import dotenv from "dotenv";
 import express from "express";
 import cookieParser from "cookie-parser";
-
 import usuariosRoutes from './routes/usuarios.routes.js'
+import usersRoutes from './routes/users.routes.js'
+
+dotenv.config();
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000; // VARIABLES DE ENTORNO que tienen info sensible y que estan guardadas en la raiz de la app en archivo .env - En este caso el puerto.
+
+
 // me permite parsear el body a JSON, directamente me asigna la data dentro de req.body
 app.use(express.json());
 // me permite parsear formularios HTML.
@@ -19,7 +23,7 @@ app.use((req, res, next) => {
   next()
 })
 
-app.use('/api', usuariosRoutes)
+app.use('/api', usersRoutes)
 
 // MIDDLEWARE PARA CONTROLAR RUTAS NO ENCONTRADAS -> 404. SIEMPRE AL FINAL. 
 app.use((req, res, next) => {

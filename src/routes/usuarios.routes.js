@@ -43,14 +43,14 @@ router.get(
   findUsuario
 );
 
-//AGREGAR USUARIO COMO ADMIN (POST)
+//AGREGAR USUARIO SIENDO ADMIN (POST)
 router.post(
   "/usuarios/administrador",
   [authRequired, adminRequired, validarDatosUsuarioAlRegistrar],
   crearUsuarioComoAdmin
 );
 
-//MODIFICAR MI PASSWORD SIENDO ADMIN
+//MODIFICAR MI PASSWORD SIENDO ADMIN (PUT)
 
 router.put(
   "/usuarios/administrador/modificarpassword",
@@ -58,7 +58,7 @@ router.put(
   modificarPassword
 );
 
-// MODIFICAR UN USUARIO COMO ADMIN(PUT)
+// MODIFICAR UN USUARIO SIENDO ADMIN(PUT)
 router.put(
   "/usuarios/administrador/:id",
   [authRequired, adminRequired, validarDatosUsuarioAlModificar, validarID], //  (PARA MODIFICAR DATOS DE LOS USERS SIENDO ADMIN - EN ESTE CASO EL ADMIN NO PUEDE MODIFICAR LA CONTRASEÑA DEL USER)

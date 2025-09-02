@@ -1,4 +1,4 @@
-//LOGICA DE LA APP - VAMOS  A HACER UN PEQUEÑO CAMBIO EN EL TITULO DE ESTE ARCHIVO DE VSC CODE.
+//LOGICA DE LA APP 
 
 import fs from "fs/promises";
 import url from "url";
