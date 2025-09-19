@@ -1,14 +1,13 @@
 import dotenv from "dotenv";
 import express from "express";
 import cookieParser from "cookie-parser";
-import usuariosRoutes from './routes/usuarios.routes.js'
-import usersRoutes from './routes/users.routes.js'
-
+import usersRoutes from "./routes/users.routes.js";
+import brandRoutes from "./routes/brand.routes.js";
+import categoryRoutes from "./routes/category.routes.js";
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000; // VARIABLES DE ENTORNO que tienen info sensible y que estan guardadas en la raiz de la app en archivo .env - En este caso el puerto.
-
 
 // me permite parsear el body a JSON, directamente me asigna la data dentro de req.body
 app.use(express.json());
@@ -20,22 +19,28 @@ app.use(cookieParser());
 // middleware personalizado.
 app.use((req, res, next) => {
   console.log(`URL Solicitada: ${req.url} - Método: ${req.method}`);
-  next()
-})
+  next();
+});
 
-app.use('/api', usersRoutes)
+//RUTAS
+app.use("/api", usersRoutes);
+app.use("/api", brandRoutes);
+app.use("/api", categoryRoutes);
 
-// MIDDLEWARE PARA CONTROLAR RUTAS NO ENCONTRADAS -> 404. SIEMPRE AL FINAL. 
+// MIDDLEWARE PARA CONTROLAR RUTAS NO ENCONTRADAS -> 404. SIEMPRE AL FINAL.
 app.use((req, res, next) => {
-  res.status(404).json({ message: `La ruta solicitada no fue encontrada: ${req.url} + ${req.method}` })
-})
-
+  res
+    .status(404)
+    .json({
+      message: `La ruta solicitada no fue encontrada: ${req.url} + ${req.method}`,
+    });
+});
 
 // Manejador de errores
 app.use((err, req, res, next) => {
-  console.log('----- Middleware manejador de errores ----');
+  console.log("----- Middleware manejador de errores ----");
   console.log(`URL Solicitada: ${req.url} - Método: ${req.method}`);
-  console.log('Stack trace:', err.stack); // especifica donde ocurrio el error
+  console.log("Stack trace:", err.stack); // especifica donde ocurrio el error
 
   // Especificar el codigo de estado de la respuesta
   const statusCode = err.status || 500;
@@ -43,17 +48,11 @@ app.use((err, req, res, next) => {
   // enviar la respuesta al cliente
   res.status(statusCode).json({
     error: {
-      message: err.message || 'Error interno del servidor',
+      message: err.message || "Error interno del servidor",
       // stack: err.stack // debemos identificar si estamos en etapa de desarrollo o produccion.
-    }
-  })
-
-
-
-
-
-
-})
+    },
+  });
+});
 
 app.listen(port, () => {
   console.log("Server Express listo, escuchando http://localhost:" + port);

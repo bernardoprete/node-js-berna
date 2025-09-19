@@ -137,3 +137,7 @@ A diferencia del DER conceptual el cual utiliza ovalos y rombos para atributos y
     - Cardinalidad se especifica con un tipo de flecha especifico 'pata de gallo', este ultimo significa la parte de 'muchos'.
 
 
+### Tarea 12/09.
+
+    -  En base al findOne, desarrollar un método findAllBySearch() -> para poder filtrar uno o más usuarios (devolver un listado.).
+    - Validar que para ciertas acciones el usuario este logueado y sea ADMIN. tener en en cuenta que el campo para verificar rol es numerico y se llama idRol.
