@@ -29,11 +29,9 @@ app.use("/api", categoryRoutes);
 
 // MIDDLEWARE PARA CONTROLAR RUTAS NO ENCONTRADAS -> 404. SIEMPRE AL FINAL.
 app.use((req, res, next) => {
-  res
-    .status(404)
-    .json({
-      message: `La ruta solicitada no fue encontrada: ${req.url} + ${req.method}`,
-    });
+  res.status(404).json({
+    message: `La ruta solicitada no fue encontrada: ${req.url} + ${req.method}`,
+  });
 });
 
 // Manejador de errores

@@ -1,7 +1,6 @@
 import { brandModel } from "../models/brand.model.js";
 import { createError, generarSlug } from "../utils/utils.js";
 
-
 // Obtener/listar marcas
 export const getBrand = async (req, res, next) => {
   try {
@@ -50,7 +49,7 @@ export const getBrandBySlug = async (req, res, next) => {
     next(error);
   }
 };
-//Crear marca 
+//Crear marca
 export const createBrand = async (req, res, next) => {
   const { nombre, imagen, descripcion } = req.body;
   try {
@@ -80,20 +79,21 @@ export const createBrand = async (req, res, next) => {
 // Actualizar marca
 export const updateBrand = async (req, res, next) => {
   const { id } = req.params;
-  const { nombre, imagen, descripcion } = req.body;
+  const data = { ...req.body };
+
   try {
-    const slug = await generarSlug(nombre, brandModel);
-    const updated = await brandModel.updatePartial(id, {
-      nombre,
-      slug,
-      imagen,
-      descripcion,
-    });
+    // solo si viene nombre en el body, agrego el slug
+    if (data.nombre) {
+      data.slug = await generarSlug(data.nombre, brandModel);
+    }
 
-    if (!updated)
-      throw createError(404, "No se encontro la marca a actualizar.");
+    const updated = await brandModel.updatePartial(id, data);
 
-    res.status(200).json({ message: "Marca actualizada con exito.", updated });
+    if (!updated) {
+      throw createError(404, "No se encontró la marca a actualizar.");
+    }
+
+    res.status(200).json({ message: "Marca actualizada con éxito.", updated });
   } catch (err) {
     if (err.status) return next(err);
     next(createError(500, "Error interno al actualizar la marca."));

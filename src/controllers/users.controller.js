@@ -164,7 +164,7 @@ export const verifyUser = async (req, res, next) => {
 export const loginUser = async (req, res, next) => {
   const { email, password } = req.body;
   try {
-    const user = await UserModel.findOne({email});
+    const user = await UserModel.findOne({ email });
     // Primer paso: Validar los datos del usuario
     if (!user) throw createError(400, "El email ingresado es incorrecto");
     if (!user.emailVerificado)

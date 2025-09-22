@@ -95,18 +95,18 @@ export const createCategory = async (req, res, next) => {
 // Actualizar categoria
 export const updateCategory = async (req, res, next) => {
   const { id } = req.params;
-  const { nombre, imagen, descripcion } = req.body;
-  try {
-    const slug = await generarSlug(nombre, categoryModel);
-    const updated = await categoryModel.updatePartial(id, {
-      nombre,
-      slug,
-      imagen,
-      descripcion,
-    });
+  const data = { ...req.body };
 
-    if (!updated)
+  try {
+    if (data.nombre) {
+      data.slug = await generarSlug(data.nombre, categoryModel);
+    }
+
+    const updated = await categoryModel.updatePartial(id, data);
+
+    if (!updated) {
       throw createError(404, "No se encontró la categoría a actualizar.");
+    }
 
     res
       .status(200)

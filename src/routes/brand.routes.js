@@ -16,7 +16,7 @@ const router = Router();
 router.get("/brands", [authRequired], getBrand);
 
 // Buscar por ID
-router.get("/brands/id/:id",[authRequired], getBrandById);
+router.get("/brands/id/:id", [authRequired], getBrandById);
 
 // Buscar por slug
 router.get("/brands/slug/:slug", [authRequired, adminRequired], getBrandBySlug);
