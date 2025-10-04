@@ -13,16 +13,16 @@ import {
 const router = Router();
 
 // Listar todas las marcas
-router.get("/brands", [authRequired], getBrand);
+router.get("/brands", getBrand);
 
 // Buscar por ID
-router.get("/brands/id/:id", [authRequired], getBrandById);
+router.get("/brands/id/:id", [authRequired, adminRequired], getBrandById); // Luego borrar el id - 
 
 // Buscar por slug
 router.get("/brands/slug/:slug", [authRequired, adminRequired], getBrandBySlug);
 
 // Crear marca
-router.post("/brands", [authRequired, adminRequired], createBrand);
+router.post("/brands" /* [authRequired, adminRequired] */, createBrand);
 
 // Actualizar marca
 router.put("/brands/:id", [authRequired, adminRequired], updateBrand);

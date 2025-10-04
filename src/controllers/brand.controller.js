@@ -27,7 +27,7 @@ export const getBrandById = async (req, res, next) => {
     if (err.status) return next(err);
     const error = createError(
       500,
-      "Error interno en el servidor al intentarlistar las marcas."
+      "Error interno en el servidor al intentar listar las marcas."
     );
     next(error);
   }
@@ -79,7 +79,7 @@ export const createBrand = async (req, res, next) => {
 // Actualizar marca
 export const updateBrand = async (req, res, next) => {
   const { id } = req.params;
-  const data = { ...req.body };
+  const data = { ...req.body }; // Aca pongo data porque tiene que ser dinamica la data que el cliente desde el front va a modificar, puede querer modificar 1 2 o varios campos, por eso la variable data se guarda con la copia (...) del req.body
 
   try {
     // solo si viene nombre en el body, agrego el slug

@@ -16,13 +16,13 @@ const router = Router();
 router.get("/categories", getCategory);
 
 // Buscar por ID
-router.get("/categories/id/:id", [authRequired], getCategoryByID);
+router.get("/categories/id/:id", [authRequired, adminRequired], getCategoryByID); //LUego sacar el fragmento de la url "/id".
 
 // Buscar por slug
-router.get("/categories/slug/:slug", [authRequired], getCategoryBySlug);
+router.get("/categories/slug/:slug", [authRequired, adminRequired], getCategoryBySlug);
 
 // Crear categoria
-router.post("/categories",[authRequired,adminRequired], createCategory);
+router.post("/categories",/* [authRequired, adminRequired], */ createCategory);
 
 // Actualizar categoria
 router.put("/categories/:id",[authRequired,adminRequired], updateCategory);

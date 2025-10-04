@@ -11,7 +11,7 @@ const dbConfig = { //Todo esto define como se conecta la app a MYsql, leyendo lo
     port: process.env.DB_PORT || 3306,
 }
 
-console.log(dbConfig); // Aqui debugeamos para ver wi la conexion esta OK o hay errores.
+console.log(dbConfig); // Aqui debugeamos para ver si la conexion esta OK o hay errores.
 
 
 export const pool = mysql.createPool({ //mysql.createPool: en vez de abrir y cerrar una conexión nueva cada vez, crea un conjunto de conexiones abiertas que se reutilizan. Esto es más eficiente y evita sobrecargar el servidor MySQL.

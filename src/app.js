@@ -4,6 +4,8 @@ import cookieParser from "cookie-parser";
 import usersRoutes from "./routes/users.routes.js";
 import brandRoutes from "./routes/brand.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
+import productRoutes from "./routes/product.routes.js";
+
 dotenv.config();
 
 const app = express();
@@ -26,6 +28,8 @@ app.use((req, res, next) => {
 app.use("/api", usersRoutes);
 app.use("/api", brandRoutes);
 app.use("/api", categoryRoutes);
+app.use("/api", productRoutes);
+
 
 // MIDDLEWARE PARA CONTROLAR RUTAS NO ENCONTRADAS -> 404. SIEMPRE AL FINAL.
 app.use((req, res, next) => {
