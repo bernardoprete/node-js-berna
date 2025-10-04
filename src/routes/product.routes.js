@@ -10,6 +10,9 @@ import {
   getProductsLimited,
   updateProduct,
 } from "../controllers/product.controller.js";
+import { validateSchema } from "../middlewares/validationSchemas.middleware.js";
+import { createProductSchema } from "../schemas/productScehma.js";
+import { updateProductSchema } from "../schemas/productScehma.js";
 
 const router = Router();
 
@@ -29,10 +32,10 @@ router.get("/products/detail/:slug", getProductDetail);
 router.get("/products/limited", getProductsLimited);
 
 //Crear un producto
-router.post("/products", createProduct);
+router.post("/products",  validateSchema(createProductSchema) ,createProduct);
 
 // Actualizar producto
-router.put("/products/:id", updateProduct);
+router.put("/products/:id", validateSchema(updateProductSchema) , updateProduct);
 
 // Eliminar marca
 router.delete("/products/:id", deleteProduct);

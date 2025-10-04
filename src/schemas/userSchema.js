@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const upperCaseRegex = /^(?=.*[A-Z]).+$/;
+
 export const createUserSchema = z
   .object({
     nombre: z
