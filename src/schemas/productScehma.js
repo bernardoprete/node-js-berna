@@ -40,7 +40,7 @@ export const createProductSchema = z.object({
   // .coerce.number() intenta convertir de string a número (p.ej. "15000" a 15000).
   // .gt(0) -> mayor a 0.
   precio: z.coerce
-    .number({ message: "El precio debe ser un número." })
+    .number({ message: "El precio es requerido y  debe ser un número." })
     .gt(0, { message: "El precio debe ser mayor a 0." }),
 
   // precioOferta: opcional, número positivo si viene en el body.
@@ -50,7 +50,7 @@ export const createProductSchema = z.object({
     .min(0, { message: "El precio de oferta debe ser mayor a 0." })
     .optional(),
 
-  // Aca no deberia validar que la fecha de ofertaHasta sea > que la fecha de creacion de la oferta?
+  // Aca no deberia validar que la fecha de ofertaHasta sea > que la fecha de creacion de la oferta o sea la fecha actual? DUDAAAAAAAAAAAAAAAA
   ofertaHasta: z.coerce //lleva de string a date
     .date({ message: "La fecha de oferta no es valida (usa YYYY-MM-DD)." })
     .optional(),
@@ -91,9 +91,6 @@ export const createProductSchema = z.object({
 // Si mandan precioOferta y Precio entonces precioOferta debe ser < precio -- HAY QUE VALIDAR ACA ?
 // Si viene oferta hasta entonces esa fecha debe ser si o si un dia futuro al de hoy.
 
-
-
-
 //SCHEMA PARA LA MODIFICACION DE UN PRODUCTO
 
 export const updateProductSchema = z.object({
@@ -103,8 +100,8 @@ export const updateProductSchema = z.object({
     .trim()
     .pipe(
       z.coerce
-        .number({ message: "El ID debe ser un número." })
-        .int({ message: "El ID debe ser un número entero." })
+        .number({ message: "El ID debe ser un numero." })
+        .int({ message: "El ID debe ser un nmero entero." })
         .positive({ message: "El ID debe ser un entero positivo." })
     ),
 
@@ -149,7 +146,7 @@ export const updateProductSchema = z.object({
 
   ofertaHasta: z.coerce
     .date({ message: "La fecha de oferta no es válida (usa YYYY-MM-DD)." })
-    .optional(), // Esta fecha si o si debe ser futura con respecto al dia de la creacion de la oferta. y si hay ofertaHasta entonces en el body tiene que estar si o si PrecioOferta -- AQUI NO LO VALIDO.
+    .optional(), // Esta fecha si o si debe ser futura con respecto al dia de la creacion de la oferta. y si hay ofertaHasta entonces en el body tiene que estar si o si PrecioOferta -- AQUI NO LO VALIDO. -- OJO
 
   stock: z.coerce
     .number({ message: "El stock debe ser un número." })
@@ -188,12 +185,8 @@ export const updateProductSchema = z.object({
     .optional(),
 });
 
-// -----------------------------------------------------------------------------
-// SCHEMA: PAGINACIÓN (?page=&limit=)
-// -----------------------------------------------------------------------------
-// Pensado para validar req.query de tu endpoint GET /products/limited.
-// - .default(1/5) te permite NO mandar page/limit y que tengan valores por defecto.
-// - .int().min(1) asegura que sean enteros positivos.
+// SCHEMA PARA LA PAGINACION DE PRODUCTOS (?page=&limit=)
+
 export const paginationSchema = z.object({
   page: z.coerce
     .number({ message: "El parámetro 'page' debe ser un número." })

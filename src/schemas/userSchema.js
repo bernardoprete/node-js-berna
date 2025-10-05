@@ -38,7 +38,7 @@ export const createUserSchema = z
   });
 
 export const updateUserSchema = z.object({
-  //Todos los campos que aparecen aca se ueden modificar, el resto no . Por ejm nombre, apellido. fecha nac y direccion.
+  //Todos los campos que aparecen aca se pueden modificar, el resto no . Por ejm nombre, apellido. fecha nac y direccion. Esto es para req.params no para el body ya que no permite el body insertar id.
   id: z
     .string()
     .trim()

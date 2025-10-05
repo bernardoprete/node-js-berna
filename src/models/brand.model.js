@@ -53,7 +53,7 @@ export const brandModel = {
       throw error;
     }
   },
-//Crear marca
+  //Crear marca
   async create({ nombre, slug, imagen, descripcion }) {
     try {
       const sql = `
@@ -64,7 +64,8 @@ export const brandModel = {
       const [result] = await pool.execute(sql, [
         nombre,
         slug,
-        imagen,
+        (imagen = null), // Si imagen no esta en el body que se va a pasar para crear el producto, este campo queda como nulo y no como undefined que por sql rompe el back.
+        (ofertaHasta = null), //Idem arriba
         descripcion,
       ]);
       return result.affectedRows > 0;

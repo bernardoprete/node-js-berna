@@ -11,7 +11,7 @@ import {
   updateProduct,
 } from "../controllers/product.controller.js";
 import { validateSchema } from "../middlewares/validationSchemas.middleware.js";
-import { createProductSchema } from "../schemas/productScehma.js";
+import { createProductSchema, paginationSchema } from "../schemas/productScehma.js";
 import { updateProductSchema } from "../schemas/productScehma.js";
 
 const router = Router();
@@ -29,10 +29,10 @@ router.get("/products/slug/:slug", getProductBySlug);
 router.get("/products/detail/:slug", getProductDetail);
 
 // Obtener productos con paginacion especifica
-router.get("/products/limited", getProductsLimited);
+router.get("/products/limited", validateSchema(paginationSchema),  getProductsLimited); //.........products/limited?page=1&limit=2 (Esta es la parte final de la ruta)
 
 //Crear un producto
-router.post("/products",  validateSchema(createProductSchema) ,createProduct);
+router.post("/products", validateSchema(createProductSchema), createProduct);
 
 // Actualizar producto
 router.put("/products/:id", validateSchema(updateProductSchema) , updateProduct);

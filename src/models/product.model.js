@@ -1,4 +1,3 @@
-import { deleteProduct } from "../controllers/product.controller.js";
 import { pool } from "../db.js";
 
 import { createError } from "../utils/utils.js";
@@ -113,17 +112,19 @@ WHERE idPelicula = 15;
     }
   },
 
-  async create({
+  //METODO PARA LA CREACION DE UN PRODUCTO.
+
+  async create({ //Esto que estoy haciaendo aca es desestructuracio de objetos  - OJO
     nombre,
     descripcionCorta,
     descripcionLarga,
     stock,
     slug,
     precio,
-    precioOferta = null,
-    ofertaHasta = null,
+    precioOferta = null,  // Si precio oferta no esta en el body que se va a pasar para crear el producto, este campo queda como nulo y no como undefined que por sql rompe el back.
+    ofertaHasta = null,    //Idem arriba
     imgPrincipal,
-    visible = true,
+    visible = true, //Idem arriba.
     sku = null,
     idMarca,
     idCategoria,
@@ -171,43 +172,57 @@ WHERE idPelicula = 15;
     }
   },
 
+  //METODO PARA PAGINACION
+
   async findAllLimit(page, limit, offset) {
     try {
-      // Calcular el total de productos de la BD mediante esta consulta SQL.
       const [resultTotal] = await pool.execute(
         `SELECT COUNT(${this.fields.id}) as count FROM ${this.tablename}`
       );
-      /* console.log('result total', resultTotal);
-             console.log('result total fila 1', resultTotal[0]);*/
+      const totalProducts = resultTotal[0].count;
 
-      const totalProducts = resultTotal[0].count; //Como arriba desestructuro,me queda asi : resultTotal = [ { count: 42 } ] ----- aqui voy directo a obtener el numero del array (pongo[0] ya que es el unico campo que tiene ese array y con el.count llego a el numero en si ejm 42 )
+      // Validacion interna (no hay res aca en el modelo que devolvemos info) Esto es para que no se muestre un limite que exceda la cantidad de productos existentes.
+      if (limit > totalProducts && totalProducts > 0) {
+        return {
+          error: true,
+          message: `El límite (${limit}) no puede ser mayor al total de productos (${totalProducts}).`,
+          totalProducts,
+        };
+      }
 
       const [products] = await pool.execute(
         `SELECT * FROM ${this.tablename} LIMIT ? OFFSET ?`,
         [String(limit), String(offset)]
       );
 
-      // calcular el total de páginas que debe mostrar el front
-      const totalPages = Math.ceil(totalProducts / limit); // el método .ceil() redondea un número decimal hacia arriba.
+      const totalPages = Math.ceil(totalProducts / limit);
 
-      // META DATOS PARA LA PAGINACIÓN.
+      // Validacion interna (no hay res aca en el modelo que devolvemos info) Esto es para que no se muestre un vacios paginas que no existen si colocamos en page una pagina que excede el trango de las existentes.
+
+      if (page > totalPages && totalProducts > 0) {
+        return {
+          error: true,
+          message: `La pagina ${page} no existe. El total de paginas disponibles es: ${totalPages}`,
+          totalProducts,
+          totalPages,
+        };
+      }
 
       return {
         products,
         pagination: {
           totalProducts,
           totalPages,
-          currentPage: page, // Pagina actual
+          currentPage: page,
           limit,
-          hasNextPage: page < totalPages, //Si hay proxima pagina.
-          hasPrevPage: page > 1, // Si hay pagina previa.
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1,
         },
       };
     } catch (error) {
       throw error;
     }
   },
-
   // Actualizar producto (update parcial)
   async updatePartial(id, updateData) {
     if (!updateData || Object.keys(updateData).length === 0) {

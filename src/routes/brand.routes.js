@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { authRequired, adminRequired } from "../middlewares/auth.middleware.js";
-
 import {
   getBrandBySlug,
   createBrand,
@@ -9,6 +8,8 @@ import {
   getBrand,
   getBrandById,
 } from "../controllers/brand.controller.js";
+import { validateSchema } from "../middlewares/validationSchemas.middleware.js";
+import { createBrandSchema, updateBrandSchema } from "../schemas/brandSchema.js";
 
 const router = Router();
 
@@ -16,16 +17,24 @@ const router = Router();
 router.get("/brands", getBrand);
 
 // Buscar por ID
-router.get("/brands/id/:id", [authRequired, adminRequired], getBrandById); // Luego borrar el id - 
+router.get("/brands/id/:id", [authRequired, adminRequired], getBrandById); // Luego borrar el id -
 
 // Buscar por slug
 router.get("/brands/slug/:slug", [authRequired, adminRequired], getBrandBySlug);
 
 // Crear marca
-router.post("/brands" /* [authRequired, adminRequired] */, createBrand);
+router.post(
+  "/brands" /* [authRequired, adminRequired] */,
+  validateSchema(createBrandSchema),
+  createBrand
+);
 
 // Actualizar marca
-router.put("/brands/:id", [authRequired, adminRequired], updateBrand);
+router.put(
+  "/brands/:id",
+  /* [authRequired, adminRequired] ,*/ validateSchema(updateBrandSchema),
+  updateBrand
+);
 
 // Eliminar marca
 router.delete("/brands/:id", [authRequired, adminRequired], deleteBrand);

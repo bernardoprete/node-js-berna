@@ -1,6 +1,6 @@
 export const validateSchema = (schema) => (req, res, next) => {
     // Datos a validar, aquellos que lleguen desde el cliente.
-    const dataToValidate = { ...req.body, ...req.params } // Juntamos lo que viene en el body y/o en los parametros de consulta en un mismo objeto lalamado dataToValidate para validar.
+    const dataToValidate = { ...req.body, ...req.params, ...req.query } // Juntamos lo que viene en el body y/o en los req.params y req.query  en un mismo objeto lalamado dataToValidate para validar.
 
     const result = schema.safeParse(dataToValidate) //  Nunca rompe el código: devuelve un objeto con la validación. ESTA ES LA LINEA CLAVE- USAR EL SCHEMA.SAFEPARSE
 
