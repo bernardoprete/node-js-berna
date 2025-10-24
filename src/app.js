@@ -5,6 +5,8 @@ import usersRoutes from "./routes/users.routes.js";
 import brandRoutes from "./routes/brand.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
 import productRoutes from "./routes/product.routes.js";
+import cartRoutes from "./routes/cart.routes.js";
+
 
 dotenv.config();
 
@@ -29,6 +31,8 @@ app.use("/api", usersRoutes);
 app.use("/api", brandRoutes);
 app.use("/api", categoryRoutes);
 app.use("/api", productRoutes);
+app.use("/api", cartRoutes);
+
 
 
 // MIDDLEWARE PARA CONTROLAR RUTAS NO ENCONTRADAS -> 404. SIEMPRE AL FINAL.
