@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const upperCaseRegex = /^(?=.*[A-Z]).+$/;
 
+//SCHEMA PARA LA CREACION DE UN USUARIO
 export const createUserSchema = z
   .object({
     nombre: z
@@ -37,6 +38,7 @@ export const createUserSchema = z
     path: ["password"],
   });
 
+//SCHEMA PARA LA MODIFICACION DE UN USUARIO
 export const updateUserSchema = z.object({
   //Todos los campos que aparecen aca se pueden modificar, el resto no . Por ejm nombre, apellido. fecha nac y direccion. Esto es para req.params no para el body ya que no permite el body insertar id.
   id: z

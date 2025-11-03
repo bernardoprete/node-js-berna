@@ -1,12 +1,10 @@
 import { pool } from "../db.js";
 import { createError } from "../utils/utils.js";
 
-/* Cart Model : Maneja o guarda toda la informacion del carrito en si (no los productos dentro del mismo carrito) es importante saber que este modelo es basiamente la tabla carrito en nuestra BD. */
-
 export const CartModel = {
   // Definimos una propiedad para contener/acceder al nombre de la tabla correspondiente a este modelo
   tablename: "carrito",
-  // Definimos los nombre de los campos de esa tabla  en un objeto.
+  // Definimos los nombre de los campos en un objeto.
   fields: {
     id: "idCarrito",
     created_at: "created_at",
@@ -16,7 +14,6 @@ export const CartModel = {
   },
 
   async findAll() {
-    /* Reutilzamos este metodo adaptandolo a la tabla carrito para traer todos los carritos (útil para debug o admin). Pero no es tan importante. */
     try {
       const [rows] = await pool.execute(`SELECT * FROM ${this.tablename}`); //El pool.execute devuelve un array con arrays adentro, uno que tiene las filas, el resultado de la consulta y el otro los metadatos (que no su usan casi nunca), entonces al hacer: [rows] -  hacemos DESESTRUCTURACION DE ARRAYS y al poner solo una variable (en este caso rows) lo que decimos es que nos muestre el primer array de esos 2, es decir el de primer indice.
       return rows; //Aqui solo devolvemos rows (sin corchete) ya que el corchete lo haciamos para hacer la desestructuracion y aqui solo mostramos el resultado.
@@ -26,7 +23,6 @@ export const CartModel = {
   },
 
   async findByID(id) {
-    /* Trae un carrito puntual por su ID (idCarrito). Digamos que este metodo SI es importante */
     try {
       const [rows] = await pool.execute(
         `SELECT * FROM ${this.tablename} WHERE ${this.fields.id} = ?`,
@@ -40,7 +36,7 @@ export const CartModel = {
   },
 
   async findOne(searchParams) {
-    // Busca por campos dinámicos, por ejemplo { idUsuario: 4 } Por ende lo  mas basico es buscar por IdUsuario.
+    //Lo mas basico es buscar por IdUsuario.
     try {
       if (!searchParams || Object.keys(searchParams).length === 0)
         //Si no existen parametros de busqueda o
@@ -62,17 +58,28 @@ export const CartModel = {
 
   //Crear carrito
   async create(idUsuario) {
-    /* Crea un carrito nuevo para el usuario indicado (con su numero de id), con una fecha de expiración (2 semanas después del momento actual) y Retorna el idCarrito recién creado. */
     try {
       const sql = `
       INSERT INTO ${this.tablename}
       (${this.fields.idUsuario}, ${this.fields.expires_at})
       VALUES (?, DATE_ADD(NOW(), INTERVAL 2 WEEK))
     `;
-      const [result] = await pool.execute(sql, [idUsuario]);
-      return result.insertId;
+      const [result] = await pool.execute(sql, [
+      idUsuario
+      ]);
+      return result.insertId
     } catch (error) {
       throw error;
     }
   },
+
+ async checkItemInCart() {
+    try {
+      const [rows] = await pool.execute(`  SELECT  * FROM carritoproductos where idProducto =7 and idCarrito=99`); 
+    } catch (error) {
+      throw error;
+    }
+  },
+
+
 };

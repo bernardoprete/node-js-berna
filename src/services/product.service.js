@@ -84,7 +84,7 @@ export const getProductsService = async (page, limit, offset, filters) => {
 
     const finalParams = [...queryParams, String(limit), String(offset)];
     // productos
-    //PARTE DIFERENCIAL - Aca el modelo hace la consulta solamente - este servicio hace la logica que utilizamos previamente4 para armar la consulta y el comntrolador los utiliza y da una respuesta positiva o negartiva. 
+    //PARTE DIFERENCIAL - Aca el modelo hace la consulta solamente - este servicio hace la logica que utilizamos previamente para armar la consulta y el comntrolador los utiliza y da una respuesta positiva o negartiva. 
     const products = await ProductModel.findAllLimit2( // HASTA ACA TODO IGUAL - PERO AHORA USAMOS EL METODO FINDALLLIMIT2 (Esta en EL MODELO) //Este método hace solo la parte del SELECT,sin armar filtros ni contar totales.Básicamente es una versión simplificada o reutilizable de findAllLimit pensada para cuando ya   tenés todos los componentes armados desde afuera (por ejemplo, desde un servicio o un método superior, como en ESTE CASO.)
       finalParams,
       whereClause,

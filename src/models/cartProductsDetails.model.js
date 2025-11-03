@@ -181,15 +181,14 @@ export const CartProductsDetailsModel = {
     }
   },
 
-  async clearCartItems(idCarrito) {
+  async clearCartItems(idCarrito, connection) {
     try {
       /* Hace la consulta SQL para limpiar/borrar todos los  productos en determiando carrito (buscado por idCarrito que llega por parametro) */
-      const [result] = await pool.execute(
+      const [result] = await connection.execute(
         `DELETE FROM ${this.tablename} WHERE ${this.fields.idCarrito} = ? `,
         [idCarrito]
       );
-
-      return result.affectedRows; // Aqui me dice cuantos registos fueron eliminados, es decir cuantas filas fieron afectadas en la consulta.
+      return result.affectedRows > 0
     } catch (error) {
       throw error;
     }

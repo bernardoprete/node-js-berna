@@ -46,6 +46,21 @@ export const ProductModel = {
     }
   },
 
+  //METODO NECESARIO PARA LA TRANSACCION SQL.
+  async findByIDForUpdate(id, connection) {
+    try {
+      const [rows] = await connection.execute(
+        `SELECT * FROM ${this.tablename} WHERE ${this.fields.id} = ? FOR UPDATE` /* Esto bloquea la fila del producto para evitar que otro usuario la modifique mientras se hace la compra.
+Es el bloqueo pesimista del que hablo Manuel */,
+        [id]
+      );
+      return rows[0]; // Aqui devolvemos por convencion rows[0] porque si o si la consulta nos dara como respuesta un unico elemento, pese a eso por convencion va ese primer indice.
+    } catch (error) {
+      console.log("Error al obtener el genero solicitado", error);
+      throw error;
+    }
+  },
+
   async findOne(searchParams) {
     try {
       if (!searchParams || Object.keys(searchParams).length === 0)
@@ -230,8 +245,6 @@ export const ProductModel = {
           ? `WHERE ${whereConditions.join(" AND ")}` //construye el where final agregando AND si es necesario.
           : "";
 
-
-
       //ORDER BY
       /* Construir dinámicamente el ORDER BY - Es decir el orden por el cual se mostraran los resultados de la consulta SQL */
 
@@ -248,7 +261,8 @@ export const ProductModel = {
         ];
         const sortDirection = filters.sortDirection === "desc" ? "DESC" : "ASC"; // El otro parametros de consulta que puede venir o no - Si se cumple la condicion sera DESC sino ASC el orden.
 
-        if (validSortFields.includes(filters.sortBy)) { // Si alguno de los campos de ordenamiento validos estan incluidos en el parametro filters que llega entonces reemplazamos la variable orderClause y agregamos la direccion tmb para que quede completa y ya PUEDA SER UTILIZADA.
+        if (validSortFields.includes(filters.sortBy)) {
+          // Si alguno de los campos de ordenamiento validos estan incluidos en el parametro filters que llega entonces reemplazamos la variable orderClause y agregamos la direccion tmb para que quede completa y ya PUEDA SER UTILIZADA.
           orderClause = `ORDER BY ${filters.sortBy} ${sortDirection}`;
         }
       }
@@ -356,7 +370,8 @@ export const ProductModel = {
   },
 
   // Actualizar producto (update parcial)
-  async updatePartial(id, updateData) {
+  async updatePartial(id, updateData, connection = pool) {
+    //conection o pool comun.
     if (!updateData || Object.keys(updateData).length === 0) {
       throw createError(
         400,
@@ -370,7 +385,7 @@ export const ProductModel = {
     const setData = fields.map((field) => `${field} = ?`).join(", ");
     const sql = `UPDATE ${this.tablename} SET ${setData} WHERE ${this.fields.id} = ?`;
 
-    const [result] = await pool.execute(sql, [...values, id]); //Copio array de objetos como primer parametro
+    const [result] = await connection.execute(sql, [...values, id]); //Copio array de objetos como primer parametro
 
     if (result.affectedRows === 0) {
       throw createError(404, "No se encontro el producto a actualizar.");

@@ -1,5 +1,5 @@
 import { CartModel } from "../models/cart.model.js";
-import { CartProductsDetailsModel} from "../models/cartProductsDetails.model.js";
+import { CartProductsDetailsModel } from "../models/cartProductsDetails.model.js";
 import { ProductModel } from "../models/product.model.js";
 import { createError } from "../utils/utils.js";
 
@@ -7,7 +7,7 @@ import { createError } from "../utils/utils.js";
 Lo mismo si se desa actualizar la cantidad del carrito o eliminar productos del mismo.
 Aqui vamos a trabajar con  metodos creados tanto en cartModel como en cartProdcuctsDetailsModel y hasta en prodcutModel(diferentes modelos que tenemos)que trabajan con diferentes tablas de la BD respectivamente (carrito - carritoproducto - product) */
 
-//SERVICIO QUE TIENE LA LOGICA PARA AGREGAR UN PRODCUTO AL CARRITO.
+//SERVICIO QUE TIENE LA LOGICA PREVIA NECESARIA PARA AGREGAR UN PRODUCTO AL CARRITO.
 
 export const addCartItemService = async (idUsuario, idProducto, cantidad) => {
   let idCarrito;
@@ -99,7 +99,7 @@ export const addCartItemService = async (idUsuario, idProducto, cantidad) => {
   }
 };
 
-//SERVICIO QUE TIENE LA LOGICA PARA ACTUALIZAR EL CARRITO (MODIFICA CANTIDADES)
+//SERVICIO QUE TIENE LA LOGICA PREVIA NECESARIA PARA ACTUALIZAR EL CARRITO (MODIFICA CANTIDADES)
 
 /**
  * Verifica que el producto este en el carrito, y modifica dicho producoto.
@@ -179,6 +179,8 @@ export const updateCartItemService = async (
   }
 };
 
+
+//SERVICIO QUE BUSCA Y MUESTRA TODOS LOS PRODUCTOS DE UN CARRITO (MAS SU MONTO TOTAL Y CANT DE PRODUCTOS. )
 /**
  * Busca y retorna todos los productos asociados a un carrito, además devuelve el monto total y el total de productos.
  * @param {Int} idCarrito - Id del Carrito
@@ -205,71 +207,4 @@ export const findItemsInCartService = async (idCarrito) => {
       "Error al intentar acceder a los productos del carrito y sus metadatos."
     );
   }
-};
-
-//SERVICIO QUE TIENE LA LOGICA PARA ELIMINAR UN PRODUCTO DEL CARRITO.
-
-export const removeItemInCartService = async (idUsuario, idProducto) => {
-  try {
-    const existedCart = await CartModel.findOne({ idUsuario }); // Metodo que mediante el idUsuario me devuelve la fila con info del carrito (si devuelve la fila es porque existe.)
-    if (!existedCart) throw createError(400, "El usuario no posee un carrito.");
-
-    const { idCarrito } = existedCart; // Desestructuramos el idCarrito del carrito existente.
-
-    // Verificamos si el producto está en el carrito
-    const itemInCart = await CartProductsDetailsModel.checkItemInCart(
-      idProducto,
-      idCarrito
-    );
-    if (!itemInCart)
-      //Sino esta.
-      throw createError(
-        400,
-        "El producto no se encuentra en el carrito del usuario."
-      );
-
-    // Si esta entonces Ejecutamos la eliminacion
-    const result = await CartProductsDetailsModel.removeItemInCart(
-      //Metodo traido del modelo.
-      idProducto,
-      idCarrito
-    );
-
-    // Si no se eliminó nada  esto me devulve (affectedRows = 0)
-    if (!result)
-      throw createError(
-        500,
-        "Ha ocurrido un error interno al intentar eliminar el producto."
-      );
-
-    // Si todo sale bien, devolvemos mensaje de éxito
-    return { message: "Producto eliminado del carrito correctamente." };
-  } catch (error) {
-    if (error.status) throw error;
-    throw createError(
-      500,
-      "Error al intentar eliminar el producto del carrito."
-    );
-  }
-};
-
-//SERVICIO QUE TIENE LA LOGICA PARA BORRAR TODOS LOS PRODUCTOS DEL CARRITO.
-
-export const clearCartItemsService = async (idUsuario) => {
-  const existedCart = await CartModel.findOne({ idUsuario }); // Metodo que mediante el idUsuario me devuelve la fila con info del carrito (si devuelve la fila es porque existe.)
-  if (!existedCart) throw createError(400, "El usuario no posee un carrito.");
-
-  //Por el contrario si ese usuario posee un carrito vamos el id de ese carrito para eliminar los pprodcutos que tiene dentro - NO ELIMINAMOS EL CARRITO - OJOOO.
-
-  const { idCarrito } = existedCart; // Desestructuramos el idCarrito del carrito existente para obtener su id.
-
-  // Aplicamos el metodo del modelo que ejecuta la consulta sql que elimina todos los prodcutos de ese carrito en particular.
-
-  const result = await CartProductsDetailsModel.clearCartItems(idCarrito); // El result es el resultado de aplicar el metodo qeu daba solo las filas afectadas en la consulta SQL.
-
-  if (result === 0) throw createError(400, "El carrito ya estaba vacio."); //Si no hay ninguna fila afectada entonces el carrito ya estaba vacio.
-
-  return {
-    message: `Se eliminaron ${result} productos del carrito y este se encuentra vacio`, // Mensaje de eliminacion correcta.
-  };
 };

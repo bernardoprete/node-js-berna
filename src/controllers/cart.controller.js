@@ -1,9 +1,7 @@
 import { createError } from "../utils/utils.js";
 import {
   addCartItemService,
-  clearCartItemsService,
   findItemsInCartService,
-  removeItemInCartService,
   updateCartItemService,
 } from "../services/cart.service.js";
 import { CartProductsDetailsModel } from "../models/cartProductsDetails.model.js";
@@ -11,7 +9,7 @@ import { CartModel } from "../models/cart.model.js";
 
 /* EL controlador se conecta a ambos modelos (cartModel y CartProdcutDetailsModel) directamente pero tambien se conecta por medio del cart.service - El controlador recibe la info ejecuta el metodo (ya sea que provenga de algun modelo o del servicio) y da respuesta. NO APLICA LOGICA  */
 
-// Este metodo permite obtener el  carrito completo del usuario (con productos).
+// CONTROLADOR PARA OBTENER EL CARRITO COMPLETO DEL USUARIO (CON PRODCUTOS)
 export const getCart = async (req, res, next) => {
   const { idUsuario } = req.user;
   try {
@@ -35,7 +33,8 @@ export const getCart = async (req, res, next) => {
   }
 };
 
-// Agregar producto al carrito
+//CONTROLADOR PARA AGREGAR UN PRODUCTO AL CARRITO.
+
 export const addCartItem = async (req, res, next) => {
   const { idUsuario } = req.user;
   const { idProducto, cantidad } = req.body;
@@ -65,13 +64,15 @@ export const addCartItem = async (req, res, next) => {
   }
 };
 
+//CONTROLADOR PARA ACTUALIZAR UN PRODUCTO DEL CARRITO.
+
 export const updateCartItem = async (req, res, next) => {
   const { idUsuario } = req.user;
   const { idProducto, cantidad } = req.body;
   try {
     const result = await updateCartItemService(idUsuario, idProducto, cantidad);
     res.status(200).json(result);
-  } catch (error) {
+  } catch (err) {
     console.log(err);
     if (err.status) return next(err);
     next(
@@ -90,10 +91,17 @@ export const removeCartItem = async (req, res, next) => {
   const { idProducto } = req.body; // Del body obtenemos el idProducto que queremos eliminar.
 
   try {
-    const result = await removeItemInCartService(idUsuario, idProducto); // Llamamos al servicio que maneja toda la logica.
+    const existedCart = await CartModel.findOne({ idUsuario }); // Metodo que mediante el idUsuario me devuelve la fila con info del carrito (si devuelve la fila es porque existe.)
+    if (!existedCart) throw createError(400, "El usuario no posee un carrito.");
+    const result = await CartProductsDetailsModel.removeItemInCart(
+      idProducto,
+      existedCart.idCarrito
+    ); //result = false => !=> true
 
+    if (!result)
+      throw createError(400, "No se ha eliminado el producto del carrito");
     //  Si el servicio responde correctamente, devolvemos su mensaje de éxito.
-    res.status(200).json(result);
+    res.sendStatus(204);
   } catch (error) {
     if (error.status) return next(error);
     next(
@@ -111,9 +119,18 @@ export const clearCart = async (req, res, next) => {
   const { idUsuario } = req.user; // Del token obtenemos el idUsuario.
 
   try {
-    const result = await clearCartItemsService(idUsuario); // Llamamos al servicio que maneja toda la logica para borrar todos los productos del carrito.
-    //  Si el servicio responde correctamente, devolvemos su mensaje de éxito.
-    res.status(200).json(result);
+    const existedCart = await CartModel.findOne({ idUsuario }); // Metodo que mediante el idUsuario me devuelve la fila con info del carrito (si devuelve la fila es porque existe.)
+    if (!existedCart) throw createError(400, "El usuario no posee un carrito.");
+    const result = await CartProductsDetailsModel.clearCartItems(
+      existedCart.idCarrito
+    ); // El result es el resultado de aplicar el metodo qeu daba solo las filas afectadas en la consulta SQL.
+    if (!result)
+      throw createError(
+        400,
+        "No se ha podido limpiar el carrito o se este se encontraba vacio"
+      );
+
+    res.sendStatus(204);
   } catch (error) {
     if (error.status) return next(error);
     next(createError(500, "Error interno al intentar vaciar el carrito."));
