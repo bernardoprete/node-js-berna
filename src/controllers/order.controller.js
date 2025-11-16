@@ -1,10 +1,11 @@
 import { createError } from "../utils/utils.js";
 import {
   createOrderService,
+  findItemsInOrderService,
   findOrderDetailsAdminService,
-  findOrderDetailsUserService,
+  getAllClientOrdersService,
+  getAllOrdersSystemService,
 } from "../services/order.service.js";
-import { OrderModel } from "../models/order.model.js";
 
 /* EL controlador puede conectarse a ambos modelos (orderModel y OrderProdcutDetailsModel) directamente pero tambien sepuede conectar por medio del cart.service - El controlador recibe la info ejecuta el metodo (ya sea que provenga de algun modelo o del servicio) y da respuesta. NO APLICA LOGICA  */
 
@@ -26,20 +27,48 @@ export const createOrder = async (req, res, next) => {
   }
 };
 
-/* CONTROLADOR PARA OBTENER TODOS LOS PEDIDOS DE UN USUARIO CON SUS PRODUCTOS Y DIRECCIÓN */
-export const getAllOrders = async (req, res, next) => {
+//CONTROLADOR PARA OBTENER TODAS LAS ORDENES DE UN CLIENTE / USUARIO LOGUEADO (PAGINADAS/FILTRADAS)
+export const getAllClientOrders = async (req, res, next) => {
   const { idUsuario } = req.user; // Obtenemos el idUsuario del token
+  // Extraemos si vienen seteados los parámetros para la paginación
+  const page =
+    parseInt(req.query.page) && req.query.page >= 1
+      ? parseInt(req.query.page)
+      : 1;
+  const limit =
+    parseInt(req.query.limit) && req.query.limit >= 1
+      ? parseInt(req.query.limit)
+      : 5;
+  const offset = (page - 1) * limit;
+  const filters = {
+    producto: req.query.producto || null,
+    categoria: req.query.categoria || null,
+    fechaInicio: req.query.fecha_inicio || null,
+    fechaFin: req.query.fecha_fin || null,
+    sortBy: req.query.sort_by || "fecha_pedido",
+    sortDirection: req.query.sort_direction || "desc",
+    estadoPago: req.query.estado_pago || null,
+    metodoPago: req.query.metodo_pago || null,
+    estadoPedido: req.query.estado_pedido || null,
+  };
+
+  const cleanFilters = Object.fromEntries(
+    Object.entries(filters).filter(([key, value]) => {
+      //Elimina del objeto cualquier filtro vacío (null, undefined, o string vacío).
+      return value !== null && value !== undefined && value !== "";
+    })
+  );
 
   try {
-    // Llamamos al modelo que obtiene los pedidos (incluyendo info de direccion de envio)
-    const pedidos = await OrderModel.findOrderWhitAdressUser(idUsuario); //Directamente del modelo al controlador sin servicio. OJO.
-
+    const result = await getAllClientOrdersService(
+      idUsuario,
+      page,
+      limit,
+      offset,
+      cleanFilters
+    );
     // Enviamos la respuesta
-    res.status(200).json({
-      message: `Listado de pedidos del usuario:`,
-      cantidadPedidos: pedidos.length,
-      pedidos: pedidos,
-    });
+    res.status(200).json(result);
   } catch (error) {
     console.error("Error al intentar listar los pedidos:", error);
     if (error.status) return next(error);
@@ -47,13 +76,13 @@ export const getAllOrders = async (req, res, next) => {
   }
 };
 
-//CONTROLADOR PARA OBTENER UN PEDIDO ESPECÍFICO DEL USUARIO LOGUEADO (CON DETALLE DE PRODUCTOS Y DIRECCIÓN). AQUI EL USER PUEDE VER SOLO SUS PEDIDOS
+///CONTROLADOR PARA OBTENER UN PEDIDO ESPECÍFICO DEL USUARIO LOGUEADO (CON DETALLE DE PRODUCTOS). AQUI EL USER PUEDE VER SOLO SUS PEDIDOS Y DETALLE
 export const getOrderDetailUser = async (req, res, next) => {
   const { idPedido } = req.params; // Obtenemos el id del pedido desde la URL.
   const { idUsuario } = req.user;
 
   // Llamamos al servicio que contiene la logica completa en order.service
-  const pedidoCompleto = await findOrderDetailsUserService(idPedido, idUsuario);
+  const pedidoCompleto = await findItemsInOrderService(idPedido, idUsuario);
 
   // Si todo sale bien devolvemos el resultado.
   res.status(200).json({
@@ -69,33 +98,54 @@ export const getOrderDetailUser = async (req, res, next) => {
 };
 // ------------------------------------------------------------------CONTROLADOR PARA ADMINISTRADOR ----------------------------------------------------------
 
-// CONTROLADOR PARA OBTENER TODOS LOS PEDIDOS DEL SISTEMA (ADMIN) - SIN PRODUCTOS INCLUIDOS
+//CONTROLADOR PARA OBTENER TODAS LAS ORDENES DEL SISTEMA (PAGINADAS Y CON POSIBLES FILTROS Y ORDENAMIENTO)
 
-export const getAllOrdersAdmin = async (req, res, next) => {
+export const getAllOrdersSystem = async (req, res, next) => {
+  // Extraemos si vienen seteados los parámetros para la paginación
+  const page =
+    parseInt(req.query.page) && req.query.page >= 1
+      ? parseInt(req.query.page)
+      : 1;
+  const limit =
+    parseInt(req.query.limit) && req.query.limit >= 1
+      ? parseInt(req.query.limit)
+      : 5;
+  const offset = (page - 1) * limit;
+
+  //FILTROS
+  const filters = {
+    producto: req.query.producto || null,
+    categoria: req.query.categoria || null,
+    fechaInicio: req.query.fecha_inicio || null,
+    fechaFin: req.query.fecha_fin || null,
+    sortBy: req.query.sort_by || "fecha_pedido",
+    sortDirection: req.query.sort_direction || "desc",
+    estadoPago: req.query.estado_pago || null,
+    metodoPago: req.query.metodo_pago || null,
+    estadoPedido: req.query.estado_pedido || null,
+  };
+
+  const cleanFilters = Object.fromEntries(
+    Object.entries(filters).filter(([key, value]) => {
+      //Elimina del objeto cualquier filtro vacío (null, undefined, o string vacío).
+      return value !== null && value !== undefined && value !== "";
+    })
+  );
+
   try {
-    // Obtenemos todos los pedidos con la info de usuario y dirección
-    const orders = await OrderModel.findAllWithUserAndAddress(); //Llamamos al metodo del modelo.
-    // Si no hay pedidos registrados, lanzamos un error informativo
-    if (!orders || orders.length === 0)
-      throw createError(404, "No existen pedidos registrados en el sistema.");
-
-    res.status(200).json({
-      message: "Listado de pedidos del sistema obtenido correctamente.",
-      pedidos: orders,
-      totalPedidos: orders.length,
-    });
+    const result = await getAllOrdersSystemService(
+      // Llamado directamente al servicio
+      page,
+      limit,
+      offset,
+      cleanFilters
+    );
+    // Enviamos la respuesta
+    res.status(200).json(result);
   } catch (error) {
-    console.log(
-      "Error al intentar listar todos los pedidos del sistema:",
-      error
-    );
+    console.error("Error al intentar listar los pedidos:", error);
     if (error.status) return next(error);
-    next(
-      createError(
-        500,
-        "Error interno al intentar listar los pedidos del sistema."
-      )
-    );
+    next(createError(500, "Error interno al intentar listar los pedidos."));
   }
 };
 

@@ -46,7 +46,7 @@ export const ProductModel = {
     }
   },
 
-  //METODO NECESARIO PARA LA TRANSACCION SQL.
+  //METODO NECESARIO PARA LA TRANSACCION SQL. IMPORTANTEEEEE
   async findByIDForUpdate(id, connection) {
     try {
       const [rows] = await connection.execute(

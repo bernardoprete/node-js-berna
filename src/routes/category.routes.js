@@ -22,7 +22,7 @@ router.get(
   "/categories/id/:id",
   [authRequired, adminRequired],
   getCategoryByID
-); //LUego sacar el fragmento de la url "/id".
+); //Luego sacar el fragmento de la url "/id".
 
 // Buscar por slug
 router.get(

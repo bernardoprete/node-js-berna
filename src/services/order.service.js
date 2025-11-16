@@ -4,8 +4,10 @@ import { CartProductsDetailsModel } from "../models/cartProductsDetails.model.js
 import { OrderModel } from "../models/order.model.js";
 import { OrderProductsDetailsModel } from "../models/orderProductsDetails.model.js";
 import { ProductModel } from "../models/product.model.js";
+import { UserModel } from "../models/users.model.js";
 import { createError } from "../utils/utils.js";
 import { findItemsInCartService } from "./cart.service.js";
+import { sendEmailService } from "../services/email.service.js";
 
 //SERVICIO  QUE TIENE LA LOGICA PREVIA NECESARIA PARA CREAR UN PEDIDO Y AGREGAR LOS PRODUCTOS CORRESPONDIENTES AL MISMO.
 
@@ -136,6 +138,20 @@ export const createOrderService = async (
       connection
     );
 
+    // 6.5 envíamos un email de éxito al usuario.
+    // extraigo el email del usuario
+    const user = await UserModel.findByID(idUsuario);
+    const emailSend = await sendEmailService(
+      user.email,
+      "Orden procesada",
+      "<h2>Felicitaciones, tu pedido fue procesado.</h2>"
+    );
+    if (!emailSend)
+      throw createError(
+        500,
+        "Error al intentar enviar el email de notificación."
+      );
+
     // 7. Si salio todo bien, confirmar la transacción (COMMIT) SI falla algo antes de este punto se ejecuta el rollback.
     await connection.commit();
 
@@ -157,10 +173,150 @@ export const createOrderService = async (
   }
 };
 
-//SERVICIO QUE BUSCA Y MUESTRA TODOS LOS PRODUCTOS DE UN PEDIDO A TRAVES DE UN ID PEDIDO ESPECIFICO (MAS SU MONTO TOTAL Y CANT DE PRODUCTOS. )
-
-export const findItemsInOrderService = async (idPedido) => {
+//SERVICIO QUE TIENE LA LOGICA NECESARIA PARA QUE SE OBTENGAN/TRAIGAN TODOS LOS PEDIDOS DE UN USUARIO ESPECIFICO  (POR SU ID USUARIO) CON POSIBLE FILTRO Y ORDENAMIENTO, A LA VEZ EL RESULTADO ESTA PAGINADO , ESTOS PEDIDOS SIN PRODS AGREGADOS.
+export const getAllClientOrdersService = async (
+  idUsuario,
+  page,
+  limit,
+  offset,
+  filters
+) => {
   try {
+    // Construimos dinámicamente las condiciones de busqueda y parámetros. Por defecto, seteamos que el primer filtro
+    const whereConditions = ["pe.idUsuario = ?"];
+    const queryParams = [idUsuario];
+    // Verificamos los diferentes filtros que llegan.
+    if (filters.producto) {
+      whereConditions.push(
+        `prod.nombre LIKE ? OR prod.descripcionCorta LIKE ? OR prod.descripcionLarga LIKE ?`
+      );
+
+      const searchParam = `%${filters.producto}%`;
+      queryParams.push(searchParam, searchParam, searchParam);
+    }
+
+    if (filters.categoria) {
+      whereConditions.push(`c.nombre = ?`);
+      queryParams.push(filters.categoria);
+    }
+
+    if (filters.fechaInicio && filters.fechaFin) {
+      // convertir de string a fecha, para poder comparar los valores. (si la fecha de inicio es mayor, entonces, filtramos.)
+      const fechaInicio = new Date(filters.fechaInicio);
+      const fechaFin = new Date(filters.fechaFin);
+      if (fechaInicio > fechaFin)
+        throw createError(
+          400,
+          "Error en la petición, la fecha de inicio no puede ser mayor a la fecha de fin."
+        );
+
+      whereConditions.push(`fecha_pedido BETWEEN ? AND ?`);
+      const fechaInicioSQL = `${filters.fechaInicio} 00:00:00`;
+      const fechaFinSQL = `${filters.fechaFin} 23:59:59`;
+      queryParams.push(fechaInicioSQL, fechaFinSQL);
+      console.log(fechaInicioSQL, fechaFinSQL);
+    }
+
+    if (filters.estadoPago) {
+      whereConditions.push(`pe.estado_pago = ?`);
+      queryParams.push(filters.estadoPago);
+    }
+
+    if (filters.metodoPago) {
+      whereConditions.push(`pe.metodo_pago = ?`);
+      queryParams.push(filters.metodoPago);
+    }
+
+    if (filters.estadoPedido) {
+      whereConditions.push(`pe.estado = ?`);
+      queryParams.push(filters.estadoPedido);
+    }
+
+    // Concatenar las condiciones de busqueda (por defecto, si o si hay 1.)
+    const whereClause = `WHERE ${whereConditions.join(" AND ")}`;
+
+    let orderClause = "ORDER BY fecha_pedido DESC"; // orden por defecto.
+
+    if (filters.sortBy) {
+      const validSortFields = [
+        "fecha_pedido",
+        "total",
+        "estado",
+        "metodo_pago",
+        "estado_pago",
+      ];
+
+      const sortDirection = filters.sortDirection === "desc" ? "DESC" : "ASC";
+
+      if (validSortFields.includes(filters.sortBy)) {
+        orderClause = `ORDER BY pe.${filters.sortBy} ${sortDirection}`;
+      }
+    }
+
+    // Columnas que quiero obtener de la ORDEN del Cliente.
+    const orderColumns = [
+      Object.values(OrderModel.fields)
+        .filter(
+          (field) =>
+            field != OrderModel.fields.idUsuario &&
+            field != OrderModel.fields.idDireccion
+        )
+        .map((column) => `pe.${column}`),
+      "d.direccionLinea1",
+      "d.ciudad",
+    ].join(", ");
+
+    const finalParams = [...queryParams, String(limit), String(offset)];
+
+    // llamar al método del modelo para listar las ordenes paginadas y filtradas - PARTE MAS IMPORTANTE DEL METODO - DONDE SE LLAMA AL MODELO QUE EJECUTA LA CONSULTA
+    const orders = await OrderModel.findAllClientOrders(
+      finalParams,
+      whereClause,
+      orderClause,
+      orderColumns
+    );
+
+    // Metadata de la paginación
+
+    const totalOrders = await OrderModel.paginationData(
+      whereClause,
+      queryParams
+    );
+
+    const totalPages = Math.ceil(totalOrders / limit);
+    const pagination = {
+      totalOrders,
+      totalPages,
+      currentPage: page,
+      limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    };
+    return {
+      orders,
+      pagination,
+    };
+  } catch (error) {
+    console.error("Error al intentar acceder a las ordenes cliente:", error);
+    if (error.status) throw error;
+    throw createError(
+      500,
+      "Error al intentar acceder a las ordenes cliente y sus metadatos."
+    );
+  }
+};
+
+//SERVICIO QUE TIENE LA LOGICA PREVIA PARA MOSTRAR LOS PRODUCTOS DE UN PEDIDO A TRAVES DE UN ID PEDIDO ESPECIFICO (MAS SU MONTO TOTAL Y CANT DE PRODUCTOS. )
+
+export const findItemsInOrderService = async (idPedido, idUsuario) => {
+  try {
+    const pedido = await OrderModel.findOne({ idPedido }); // Validamos que el pedido existe y que peretence a un usuario y con esto obtenemos el idUsuario que esta en la propiedad del objeto que devuelve el metodo findOne.
+    if (!pedido) {
+      throw createError(404, "No se encontró el pedido solicitado.");
+    }
+    if (pedido.idUsuario !== idUsuario) {
+      throw createError(403, "No tiene permiso para ver este pedido."); //EL user puede ver solo sus pedidos / IMPORTANTEEE.
+    }
     const products = await OrderProductsDetailsModel.findItemsInOrder(idPedido); //Esto me devuelve un array con productos adentro.
 
     const total = products.reduce((acumulador, producto) => {
@@ -185,60 +341,13 @@ export const findItemsInOrderService = async (idPedido) => {
   }
 };
 
-// SERVICIO QUE MUESTRA UN PEDIDO COMPLETO (CON DATOS DE USUARIO, DIRECCION Y PRODUCTOS) PARA EL USUARIO.
-
-export const findOrderDetailsUserService = async (idPedido, idUsuario) => {
-  try {
-    //Primero buscamos el pedido principal con datos del usuario y la dirección (usa el método del modelo OrderModel).
-    const order = await OrderModel.findByIDWithUserAndAddress(idPedido);
-
-    // Si no existe ese pedido entonces mostramos el error.
-    if (!order) throw createError(404, "No se encontró el pedido solicitado.");
-
-    if (order.idUsuario !== idUsuario)
-      throw createError(403, "No tiene permiso para ver este pedido."); //ESTA ES LA VALDIACION QUE HACE LA DIFERENCIA ENTRE LOS 2 METODOS (ENTRE USER, QUE PUEDE VER SOLO SUS PEDIDOS Y EL ADMIN QUE PUEDE VER CUALQUEIR PEDIDO).
-
-    // Luego, traemos los productos que pertenecen a ese pedido usando el modelo de detalle de pedidos de OrderProdcutsDetailModel
-    const productos = await OrderProductsDetailsModel.findItemsInOrder(
-      idPedido
-    );
-
-    //  Calculamos el total sumando los subtotales de cada producto.
-    const totalCalculado = productos.reduce(
-      (acumulador, producto) =>
-        acumulador + parseFloat(producto.subtotaldetallePedido || 0),
-      0
-    );
-
-    const totalItems = productos.length; //Cantidad total de prodcutos dentro de ese pedido. (prodcutos diferentes entre si - OJO)
-
-    //  Devolvemos un objeto con toda la informacion junta.
-    return {
-      productos, // Array con los productos del pedido.
-      totalCalculado: totalCalculado.toFixed(2), // Total del pedido.,
-      totalItems : totalItems,
-    };
-  } catch (error) {
-    console.error(
-      "Error al intentar obtener el detalle completo del pedido:",
-      error
-    );
-
-    if (error.status) throw error; //
-    throw createError(
-      500,
-      "Error interno al intentar obtener el detalle del pedido ."
-    );
-  }
-};
-
 // ------------------------------------------------------------------SERVICIOS PARA ADMINISTRADOR ----------------------------------------------------------
 
-// SERVICIO QUE MUESTRA UN PEDIDO COMPLETO (CON DATOS DE USUARIO, DIRECCION Y PRODUCTOS) PARA EL ADMINISTRADOR.
+// SERVICIO QUE MUESTRA LA LOGICA PREVIAR PARA TRAER/MOSTRAR UN PEDIDO COMPLETO (CUALQUIER PEDIDO) -  (CON DATOS DE USUARIO, DIRECCION Y PRODUCTOS) PARA EL ADMINISTRADOR.
 export const findOrderDetailsAdminService = async (idPedido) => {
   try {
     //Primero buscamos el pedido principal con datos del usuario y la dirección (usa el método del modelo OrderModel).
-    const order = await OrderModel.findByIDWithUserAndAddress(idPedido);
+    const order = await OrderModel.findByIdOrder(idPedido);
 
     // Si no existe ese pedido entonces mostramos el error.
     if (!order) throw createError(404, "No se encontró el pedido solicitado.");
@@ -271,6 +380,117 @@ export const findOrderDetailsAdminService = async (idPedido) => {
     throw createError(
       500,
       "Error interno al intentar obtener el detalle del pedido ."
+    );
+  }
+};
+
+//// SERVICIO QUE MUESTRA LA LOGICA PREVIA PARA TRAER/MOSTRAR TODOS LOS PEDIDOS DEL SISTEMA (CUALQUIER PEDIDO) PARA EL ADMINISTRADOR.
+
+export const getAllOrdersSystemService = async (
+  page,
+  limit,
+  offset,
+  filters
+) => {
+  try {
+    // Construimos dinámicamente las condiciones de busqueda y parámetros. Por defecto, seteamos que el primer filtro
+    let whereConditions = [];
+    let queryParams = [];
+
+    // Verificamos los diferentes filtros que llegan.
+    if (filters.producto) {
+      whereConditions.push(
+        `prod.nombre LIKE ? OR prod.descripcionCorta LIKE ? OR prod.descripcionLarga LIKE ?`
+      );
+
+      const searchParam = `%${filters.producto}%`;
+      queryParams.push(searchParam, searchParam, searchParam);
+    }
+
+    if (filters.categoria) {
+      whereConditions.push(`c.nombre = ?`);
+      queryParams.push(filters.categoria);
+    }
+
+    if (filters.fechaInicio && filters.fechaFin) {
+      // convertir de string a fecha, para poder comparar los valores. (si la fecha de inicio es mayor, entonces, filtramos.)
+      const fechaInicio = new Date(filters.fechaInicio);
+      const fechaFin = new Date(filters.fechaFin);
+      if (fechaInicio > fechaFin)
+        throw createError(
+          400,
+          "Error en la petición, la fecha de inicio no puede ser mayor a la fecha de fin."
+        );
+      whereConditions.push(`fecha_pedido BETWEEN ? AND ?`);
+      const fechaInicioSQL = `${filters.fechaInicio} 00:00:00`;
+      const fechaFinSQL = `${filters.fechaFin} 23:59:59`;
+      queryParams.push(fechaInicioSQL, fechaFinSQL);
+      console.log(fechaInicioSQL, fechaFinSQL);
+    }
+
+    // Concatenar las condiciones de busqueda (por defecto, si o si hay 1.)
+    const whereClause =
+      whereConditions.length > 0
+        ? `WHERE ${whereConditions.join(" AND ")}`
+        : "";
+
+    let orderClause = "ORDER BY fecha_pedido DESC"; // orden por defecto.
+
+    if (filters.sortBy) {
+      const validSortFields = ["fecha_pedido", "total"];
+
+      const sortDirection = filters.sortDirection === "desc" ? "DESC" : "ASC";
+
+      if (validSortFields.includes(filters.sortBy)) {
+        orderClause = `ORDER BY pe.${filters.sortBy} ${sortDirection}`;
+      }
+    }
+
+    // Columnas que quiero obtener de la ORDEN del Cliente.
+    const orderColumns = [
+      Object.values(OrderModel.fields)
+        .filter((field) => field != OrderModel.fields.idUsuario)
+        .map((column) => `pe.${column}`),
+      "d.direccionLinea1",
+      "d.ciudad",
+    ].join(", ");
+
+    const finalParams = [...queryParams, String(limit), String(offset)];
+
+    // llamar al método del modelo para listar las ordenes paginadas y filtradas - PARTE MAS IMPORTANTE DEL METODO - DONDE SE LLAMA AL MODELO QUE EJECUTA LA CONSULTA
+    const orders = await OrderModel.findAllSystemOrders(
+      finalParams,
+      whereClause,
+      orderClause,
+      orderColumns
+    );
+
+    // Metadata de la paginación
+
+    const totalOrders = await OrderModel.paginationData(
+      whereClause,
+      queryParams
+    );
+
+    const totalPages = Math.ceil(totalOrders / limit);
+    const pagination = {
+      totalOrders,
+      totalPages,
+      currentPage: page,
+      limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    };
+    return {
+      orders,
+      pagination,
+    };
+  } catch (error) {
+    console.error("Error al intentar acceder a las ordenes cliente:", error);
+    if (error.status) throw error;
+    throw createError(
+      500,
+      "Error al intentar acceder a las ordenes cliente y sus metadatos."
     );
   }
 };

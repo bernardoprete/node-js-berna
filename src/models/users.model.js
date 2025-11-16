@@ -1,7 +1,8 @@
 import { pool } from "../db.js";
 import bcrypt from "bcryptjs";
-import { compareStringHash, hashString } from "../utils/utils.js";
+import { compareStringHash, createError, hashString } from "../utils/utils.js";
 import crypto from "crypto";
+import { sendEmailService } from "../services/email.service.js";
 
 export const UserModel = {
   // DESAROLLO DEL METODO FIND ALL (MOSTRAR/BUSCAR TODOS LOS USUARIOS) - GET
@@ -54,7 +55,7 @@ export const UserModel = {
       const fields = Object.keys(searchParams); // ["email", "nombre"]
       const values = Object.values(searchParams); // ["juan@gmail.com","juan"]
 
-      const conditions = fields.map((field) => `${field} = ?`).join('AND'); // El map te devuelve un nuevo array con cada campo seguido de un ? y unido a un join que tiene AND.
+      const conditions = fields.map((field) => `${field} = ?`).join("AND"); // El map te devuelve un nuevo array con cada campo seguido de un ? y unido a un join que tiene AND.
       // ['email = ?', 'nombre = ?'].join(' AND ') -> email = ? AND nombre = ?
 
       const sql = `SELECT * FROM usuario WHERE ${conditions}`;
@@ -120,8 +121,22 @@ export const UserModel = {
         `www.dominiomipagina.com/api/users/verify?id=${idUser}&code=${verificactionCode}` //Lo que hay que enviar por email finalmente.
       );
 
+      //  Enviamos al  usuario con el codigo de verificacion.
+      const emailSend = await sendEmailService(
+        email,
+        "Verificación de cuenta",
+        `<h2>${nombre}, este es tu código de verificación:</h2>
+         <p><b>${verificactionCode}</b></p>
+         <p>Ingresalo en la página para activar tu cuenta.</p>`
+      );
+      if (!emailSend)
+        throw createError(
+          500,
+          "Error al intentar enviar el email de notificación."
+        );
+
       const [rows] = await pool.execute(
-        "SELECT idUsuario, nombre,apellido,email,idRol FROM producto.usuario WHERE idUsuario = ?", //Esto es lo que se muestra en el thunder client cuando insertamos correctamente el usuario en la bd.
+        "SELECT idUsuario, nombre,apellido,email,idRol FROM producto.usuario WHERE idUsuario = ?", //Esto es lo que se muestra en la bd cuando insertamos el nuevo usaurio.
         [idUser]
       );
 
@@ -171,45 +186,68 @@ export const UserModel = {
       throw error;
     }
   },
-  //DESAROLLO DEL METODO VERIFY (VERIFICAR UN USUARIO)
+  // DESARROLLO DEL METODO VERIFY (VERIFICAR UN USUARIO)
 
-  verify: async (id, code) => {
-    try {
-      const [rows] = await pool.execute(
-        "SELECT codigoVerificacion, emailVerificado FROM producto.usuario WHERE idUsuario = ?",
-        [id]
-      );
+verify: async (id, code) => {
+  try {
+    // 1. Obtener los datos necesarios del usuario
+    const [rows] = await pool.execute(
+      "SELECT idUsuario, codigoVerificacion, emailVerificado, email, nombre FROM producto.usuario   WHERE idUsuario = ?",
+      [id]
+    );
 
-      if (rows.length === 0)
-        throw createError(400, "Datos de validación incorrectos.");
+    if (rows.length === 0)
+      throw createError(400, "Datos de validación incorrectos.");
 
-      const user = rows[0]; //Esto te muestra todo el usuario seleccionado. rows es un array de objetos, cada objeto es una fila de la consulta. EJM
-      /*  [
-        { codigoVerificacion: "ABC123", emailVerificado: 1 }
-          ] */
+    const user = rows[0];
 
-      if (user.emailVerificado)
-        //Si ya existe un email verificado es que el usuario ya fue verificado.
-        throw createError(400, "El email ya está verificado.");
+    // 2. Verificar si el usuario ya estaba verificado
+    if (user.emailVerificado)
+      throw createError(400, "El email ya está verificado.");
 
-      const matchCode = await compareStringHash(code, user.codigoVerificacion); // Usamos la funcion compareStringHash que hacemos en ultis.js y qu mediante bcrypt compara el codigo hasheado con el codigo
+    // 3. Comparar el código ingresado con el código hasheado en BD
+    const matchCode = await compareStringHash(code, user.codigoVerificacion);
 
-      if (!matchCode)
-        throw createError(400, "Código de verificación incorrecto.");
+    if (!matchCode)
+      throw createError(400, "Código de verificación incorrecto.");
 
-      const [result] = await pool.execute(
-        "UPDATE usuario SET emailVerificado = true, codigoVerificacion=null WHERE idUsuario = ?",
-        [id]
-      );
+    // 4. Actualizar estado del usuario → verificado
+    const [result] = await pool.execute(
+      "UPDATE producto.usuario SET emailVerificado = true, codigoVerificacion = NULL WHERE idUsuario = ?",
+      [id]
+    );
 
-      return result.affectedRows > 0;
-    } catch (error) {
-      console.log(error);
+    if (result.affectedRows === 0)
+      throw createError(500, "No se pudo actualizar el estado del usuario.");
 
-      console.log("error al intentar verificar el usuario");
-      throw error;
+    // 5. Enviar email de confirmación
+    const emailHtml = `
+      <h2 style="font-family:sans-serif;">Hola ${user.nombre} 👋</h2>
+      <p>Tu cuenta fue verificada con éxito.</p>
+      <p>Ya podés iniciar sesión y usar todos los servicios.</p>
+    `;
+
+    const emailSend = await sendEmailService(
+      user.email,
+      "✔ Cuenta verificada con éxito",
+      emailHtml
+    );
+
+    // Si falló el envío del email → No romper el flujo
+    if (!emailSend) {
+      console.log("⚠️ Advertencia: No se pudo enviar el email de confirmación.");
+      // ⚠️ PERO IGUAL devolvemos OK, porque el usuario ya está verificado
     }
-  },
+
+    // 6. Retornamos true si se verificó correctamente
+    return true;
+
+  } catch (error) {
+    console.log("❌ Error al intentar verificar el usuario:");
+    console.log(error);
+    throw error;
+  }
+},
 
   //DESAROLLO DEL METODO DELETE (BORRAR UN USUARIO)
 

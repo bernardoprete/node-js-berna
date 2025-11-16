@@ -2,7 +2,6 @@
 
 import { pool } from "../db.js"; // Vamos a utilizar el pool de conexiones
 import { crearTokenDeAcceso } from "../libs/jwt.js";
-// src/controllers/users.controller.js
 import { UserModel } from "../models/users.model.js";
 import { compareStringHash, createError } from "../utils/utils.js";
 
@@ -147,7 +146,6 @@ export const verifyUser = async (req, res, next) => {
         400,
         "No se pudo verificar la cuenta, vuelva a intentarlo."
       );
-
     res.status(200).json({ message: "Cuenta verificada con éxito!" });
   } catch (err) {
     console.log(err);
@@ -160,6 +158,7 @@ export const verifyUser = async (req, res, next) => {
     next(error);
   }
 };
+
 //LOGUEAR UN USUARIO
 export const loginUser = async (req, res, next) => {
   const { email, password } = req.body;

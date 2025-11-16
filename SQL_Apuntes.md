@@ -168,3 +168,25 @@ A diferencia del DER conceptual el cual utiliza ovalos y rombos para atributos y
 
         - Lecturas normales: Las lecutras sin (FOR UPDATE), no se tendrían que bloquear ya que leerían una version de fila que existia al inicio de la transacción que la bloquea.
 
+### Filtrado y Ordenamiento sobre tabla Pedido:
+
+- Cliente:
+
+    - Filtrar por nombre, y descripción del producto. -> LIKES 
+    - Filtrar por categoría del producto -> Estricta ==
+    - Filtrar entre fechas (fecha_pedido) -> BETWEEN -> 04-11-2025 AND 04-10-2025.
+    - Ordenar por fecha -> Order By fecha_pedido DESC por defecto.
+    - Order por totales (opcional). Order By total DESC.
+
+- Admin: 
+
+    - Filtrar por clientes (nombre , apellido, email).
+    - Filtrar por fecha pedido. (Entre - Between)
+    - Filtrar por categoría del producto -> Estricta ==
+    - Filtrar por nombre, y descripción del producto. -> LIKES
+    - Filtrar por Estado de Pago (pendiente, confirmado, rechazado).
+    - Filtrar por Método de pago (efectivo, transferencia, plataformas..)
+    - Filtrar por estado pedido (pendiente','procesando','enviado','entregado','cancelado') 
+    - Ordenar por fechas, totales, estado de pago, estado pedido, método de pago.
+
+    - ** Podriamos filtrar por ciudad, provincia.

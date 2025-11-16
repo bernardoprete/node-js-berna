@@ -103,52 +103,26 @@ export const OrderModel = {
     }
   },
 
-  //METODO QUE TRAE TODOS LOS PEDIDOS DE UN USUARIO ESPECIFICO (POR SU ID USUARIO) ESTOS PEDIDOS SIN PRODS AGREGADOS.
-  // La diferencia es que devuelve todos los registros - En este caso todos los pedidos de un usuario y agregamos info de la tabla direccion para ya tenerla a mano y no tener que hacer un modelo de direccion.
-  //LA CONSULTA SQL podria hacerla dinamica creando un objeto que represente todos los campos de la tabla producto - la *p quire decir que traiga todos los campso de la tabla prodcuto (ahorro lineas de codigo)
-  async findOrderWhitAdressUser(idUsuario) {
-    try {
-      const sql = `
-  SELECT 
-  p.*, 
-  d.idDireccion,
-  d.direccionLinea1,
-  d.direccionLinea2,
-  d.ciudad,
-  d.provincia,
-  d.codigoPostal
-FROM pedido AS p
-LEFT JOIN direcciones AS d ON p.idDireccion = d.idDireccion
-WHERE p.idUsuario = ?
-ORDER BY p.fecha_pedido DESC
-
-`;
-
-      const [rows] = await pool.execute(sql, [idUsuario]);
-      return rows;
-    } catch (error) {
-      console.log("Error al obtener los pedidos del usuario:", error);
-      throw error;
-    }
-  },
-
   // MODELO PARA CREAR UN PEDIDO
-  async create({
-    // Desestructuración del objeto...
-    fecha_pedido,
-    estado = "pendiente",
-    metodo_pago,
-    fecha_entrega,
-    fecha_envio,
-    costo_envio = 0,
-    subtotal,
-    impuestos = 0,
-    descuentos = 0,
-    total,
-    observaciones = null,
-    idUsuario,
-    idDireccion,
-  }, connection) {
+  async create(
+    {
+      // Desestructuración del objeto...
+      fecha_pedido,
+      estado = "pendiente",
+      metodo_pago,
+      fecha_entrega,
+      fecha_envio,
+      costo_envio = 0,
+      subtotal,
+      impuestos = 0,
+      descuentos = 0,
+      total,
+      observaciones = null,
+      idUsuario,
+      idDireccion,
+    },
+    connection
+  ) {
     try {
       const columns = Object.values(this.fields).filter(
         (field) => field != this.fields.id
@@ -175,62 +149,92 @@ ORDER BY p.fecha_pedido DESC
       const sql = `INSERT INTO ${this.tablename} (${columns.join(
         ", "
       )}) VALUES (${placeholders})`;
-      console.log('VALUES', values);
-      
-      // 
+      console.log("VALUES", values);
+
+      //
       const [result] = await connection.execute(sql, values);
 
       // Retornamos el ID que es autoincremental generado por la BD.
       const orderId = result.insertId;
-      console.log('ORDER ID ', orderId);
-      
-      const [rows] = await connection.execute(`SELECT * FROM ${this.tablename} WHERE ${this.fields.id} = ?`, [orderId]);
+      console.log("ORDER ID ", orderId);
+
+      const [rows] = await connection.execute(
+        `SELECT * FROM ${this.tablename} WHERE ${this.fields.id} = ?`,
+        [orderId]
+      );
 
       return rows[0];
     } catch (error) {
-      console.log(error)
+      console.log(error);
       throw createError(500, "Error al intentar crear el pedido");
+    }
+  },
+
+  //METODO QUE TRAE TODOS LOS PEDIDOS DE UN USUARIO ESPECIFICO  (POR SU ID USUARIO) CON POSIBLE FILTRO Y ORDENAMIENTO, A LA VEZ EL RESULTADO ESTA PAGINADO , ESTOS PEDIDOS SIN PRODS AGREGADOS.
+
+  async findAllClientOrders(
+    finalParams,
+    whereClause,
+    orderClause,
+    orderColumns
+  ) {
+    try {
+      const finalQuery = `SELECT DISTINCT
+    ${orderColumns}
+    FROM pedido AS pe
+    INNER JOIN detallepedido AS dp ON dp.idPedido = pe.idPedido
+    INNER JOIN producto as prod ON prod.idProducto = dp.idProducto
+    INNER JOIN categoria as c ON c.idCategoria = prod.idCategoria
+    INNER JOIN direcciones AS d ON d.idDireccion = pe.idDireccion
+    
+
+    ${whereClause}
+    ${orderClause}
+    LIMIT ? OFFSET ?`;
+
+      console.log(finalQuery);
+
+      const [orders] = await pool.execute(finalQuery, finalParams);
+      console.log("order", orders);
+
+      return orders;
+    } catch (error) {
+      console.log("Error al obtener los pedidos del sistema:", error);
+      throw createError(500, "Error al listar los pedidos del sistema.");
     }
   },
 
   // ------------------------------------------------------------------METODOS PARA ADMINISTRADOR ----------------------------------------------------------
 
-  // METODO QUE TRAE TODOS LOS PEDIDOS DEL SISTEMA (ADMIN) CON DIRECCION DE ENVIO PERO SIN PRODUCTOS.
-  async findAllWithUserAndAddress() {
+  // METODO QUE TRAE TODOS LOS PEDIDOS DEL SISTEMA (ADMIN). sin paginar si filtrar
+  async findAllSystemOrders(
+    finalParams,
+    whereClause,
+    orderClause,
+    orderColumns
+  ) {
     /* 
   Este método devuelve todos los pedidos de todos los usuarios, incluyendo datos del comprador y direccion de envio.
   SIrve  para el panel de administracion donde se necesitamos ver todas las ordenes del sistema.
   */
     try {
       const sql = `
-      SELECT 
-        p.${this.fields.id},
-        p.${this.fields.fecha_pedido},
-        p.${this.fields.estado},
-        p.${this.fields.metodo_pago},
-        p.${this.fields.total},
-        p.${this.fields.subtotal},
-        p.${this.fields.idUsuario},
-        p.${this.fields.idDireccion},
+      SELECT DISTINCT
+        ${orderColumns}
 
-        u.nombre AS nombreUsuario,
-        u.apellido AS apellidoUsuario,
-        u.email AS emailUsuario,
+      FROM pedido AS pe
+    INNER JOIN detallepedido AS dp ON dp.idPedido = pe.idPedido
+    INNER JOIN producto as prod ON prod.idProducto = dp.idProducto
+    INNER JOIN categoria as c ON c.idCategoria = prod.idCategoria
+    INNER JOIN direcciones AS d ON d.idDireccion = pe.idDireccion
 
-        d.direccionLinea1,
-        d.direccionLinea2,
-        d.ciudad,
-        d.provincia,
-        d.codigoPostal,
-        d.pais
 
-      FROM ${this.tablename} AS p
-      LEFT JOIN usuario AS u ON p.${this.fields.idUsuario} = u.idUsuario
-      LEFT JOIN direcciones AS d ON p.${this.fields.idDireccion} = d.idDireccion
-      ORDER BY p.${this.fields.fecha_pedido} DESC;
+      ${whereClause}
+      ${orderClause}
+
+      LIMIT ? OFFSET ?
     `;
-
-      const [rows] = await pool.execute(sql);
+      const [rows] = await pool.execute(sql, finalParams);
       return rows;
     } catch (error) {
       console.log("Error al obtener los pedidos del sistema:", error);
@@ -242,7 +246,7 @@ ORDER BY p.fecha_pedido DESC
   // Este método está pensado para el panel del ADMINISTRADOR. A diferencia del método findByID tradicional,
   // este combina información de tres tablas: pedido, usuarios y direcciones.
   // De esta manera podemos ver en un solo resultado: los datos del pedido, del comprador y su direccion asociada.
-  async findByIDWithUserAndAddress(idPedido) {
+  async findByIdOrder(idPedido) {
     try {
       //
       const sql = `
@@ -282,6 +286,29 @@ ORDER BY p.fecha_pedido DESC
         "Error al obtener el pedido con datos del usuario y dirección:",
         error
       );
+      throw error;
+    }
+  },
+
+  //--------------------------------------------------------------------------METODOS DE  PAGINACION --------------------------------
+
+  //PAGINATION DATA -  Este método hace solo la parte del conteo total (el “COUNT” de ordenes). Es decir “Dame solo el total de ordenes que cumplen este filtro”.Sirve cuando querés separar la obtención de ordenes del conteo total,por ejemplo si vas a combinar datos de varias tablas o hacer paginación más avanzada.
+  //PAGINATION DATA - DE LAS ORDENES
+  async paginationData(whereClause, queryParams) {
+    try {
+      const [resultTotal] = await pool.execute(
+        `SELECT COUNT(DISTINCT pe.${this.fields.id}) as count
+        FROM ${this.tablename} as pe
+        INNER JOIN detallepedido AS dp ON dp.idPedido = pe.idPedido
+        INNER JOIN producto as prod ON prod.idProducto = dp.idProducto
+        INNER JOIN categoria as c ON c.idCategoria = prod.idCategoria
+        ${whereClause}
+        `,
+        queryParams
+      );
+
+      return resultTotal[0].count;
+    } catch (error) {
       throw error;
     }
   },
