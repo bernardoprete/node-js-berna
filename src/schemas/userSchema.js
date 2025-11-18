@@ -56,14 +56,14 @@ export const updateUserSchema = z.object({
     .min(3, { message: "El nombre debe contener al menos 3 caracteres" })
     .optional(), // El optional me permite que este campo este o no este.
   apellido: z
-    .string("El nombre es requerido y debe ser un string.")
+    .string("El apellido es requerido y debe ser un string.")
     .trim()
-    .min(3, { message: "El nombre debe contener al menos 3 caracteres" })
+    .min(3, { message: "El apellido debe contener al menos 3 caracteres" })
     .optional(),
   fecha_nacimiento: z.coerce.date().optional(),
   direccion: z
-    .string("El nombre es requerido y debe ser un string.")
+    .string("La direccion es requerida y debe ser un string.")
     .trim()
-    .min(3, { message: "El nombre debe contener al menos 3 caracteres" })
+    .min(3, { message: "La direccion debe contener al menos 3 caracteres" })
     .optional(),
 });

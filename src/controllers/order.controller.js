@@ -76,7 +76,7 @@ export const getAllClientOrders = async (req, res, next) => {
   }
 };
 
-///CONTROLADOR PARA OBTENER UN PEDIDO ESPECÍFICO DEL USUARIO LOGUEADO (CON DETALLE DE PRODUCTOS). AQUI EL USER PUEDE VER SOLO SUS PEDIDOS Y DETALLE
+///CONTROLADOR PARA OBTENER DETALLE DE PRODUCTOS DEL USUARIO LOGUEADO (MEDIANTE ID DE ALGUNO DE SUS PEDIDOS). AQUI EL USER PUEDE VER SOLO LOS DETALLES DE SUS PEDIDOS.
 export const getOrderDetailUser = async (req, res, next) => {
   const { idPedido } = req.params; // Obtenemos el id del pedido desde la URL.
   const { idUsuario } = req.user;
@@ -85,10 +85,7 @@ export const getOrderDetailUser = async (req, res, next) => {
   const pedidoCompleto = await findItemsInOrderService(idPedido, idUsuario);
 
   // Si todo sale bien devolvemos el resultado.
-  res.status(200).json({
-    message: "Detalle completo del pedido obtenido correctamente.",
-    pedido: pedidoCompleto,
-  });
+  res.status(200).json(pedidoCompleto);
   try {
   } catch (error) {
     console.error("Error al obtener el pedido del usuario:", error);
@@ -123,6 +120,7 @@ export const getAllOrdersSystem = async (req, res, next) => {
     estadoPago: req.query.estado_pago || null,
     metodoPago: req.query.metodo_pago || null,
     estadoPedido: req.query.estado_pedido || null,
+    cliente: req.query.cliente || null,
   };
 
   const cleanFilters = Object.fromEntries(
@@ -161,10 +159,7 @@ export const getOrderDetailsAdmin = async (req, res, next) => {
     const pedidoCompleto = await findOrderDetailsAdminService(idPedido);
 
     // Si todo sale bien devolvemos el resultado.
-    res.status(200).json({
-      message: "Detalle completo del pedido obtenido correctamente.",
-      pedido: pedidoCompleto,
-    });
+    res.status(200).json(pedidoCompleto);
   } catch (error) {
     if (error.status) return next(error);
     next(

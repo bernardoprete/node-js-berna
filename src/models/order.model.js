@@ -27,6 +27,7 @@ export const OrderModel = {
     observaciones: "observaciones",
     idUsuario: "idUsuario",
     idDireccion: "idDireccion",
+    estado_pago: "estado_pago",
   },
 
   async findAll() {
@@ -186,7 +187,7 @@ export const OrderModel = {
     INNER JOIN producto as prod ON prod.idProducto = dp.idProducto
     INNER JOIN categoria as c ON c.idCategoria = prod.idCategoria
     INNER JOIN direcciones AS d ON d.idDireccion = pe.idDireccion
-    
+
 
     ${whereClause}
     ${orderClause}
@@ -206,29 +207,26 @@ export const OrderModel = {
 
   // ------------------------------------------------------------------METODOS PARA ADMINISTRADOR ----------------------------------------------------------
 
-  // METODO QUE TRAE TODOS LOS PEDIDOS DEL SISTEMA (ADMIN). sin paginar si filtrar
+  // METODO QUE TRAE TODOS LOS PEDIDOS DEL SISTEMA (ADMIN) (POR SU ID USUARIO) CON POSIBLE FILTRO Y ORDENAMIENTO, A LA VEZ EL RESULTADO ESTA PAGINADO , ESTOS PEDIDOS SIN PRODS AGREGADOS.
+
   async findAllSystemOrders(
     finalParams,
     whereClause,
     orderClause,
     orderColumns
   ) {
-    /* 
-  Este método devuelve todos los pedidos de todos los usuarios, incluyendo datos del comprador y direccion de envio.
-  SIrve  para el panel de administracion donde se necesitamos ver todas las ordenes del sistema.
-  */
     try {
       const sql = `
       SELECT DISTINCT
         ${orderColumns}
 
-      FROM pedido AS pe
+    FROM pedido AS pe
     INNER JOIN detallepedido AS dp ON dp.idPedido = pe.idPedido
     INNER JOIN producto as prod ON prod.idProducto = dp.idProducto
     INNER JOIN categoria as c ON c.idCategoria = prod.idCategoria
     INNER JOIN direcciones AS d ON d.idDireccion = pe.idDireccion
-
-
+    INNER JOIN usuario AS u ON u.idUsuario = pe.idUsuario
+   
       ${whereClause}
       ${orderClause}
 
@@ -302,6 +300,8 @@ export const OrderModel = {
         INNER JOIN detallepedido AS dp ON dp.idPedido = pe.idPedido
         INNER JOIN producto as prod ON prod.idProducto = dp.idProducto
         INNER JOIN categoria as c ON c.idCategoria = prod.idCategoria
+        INNER JOIN direcciones AS d ON d.idDireccion = pe.idDireccion
+        INNER JOIN usuario AS u ON u.idUsuario = pe.idUsuario
         ${whereClause}
         `,
         queryParams

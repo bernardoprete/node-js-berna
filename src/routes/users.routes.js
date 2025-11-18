@@ -39,6 +39,6 @@ router.post("/users/login", loginUser); //Loguear un usuario
 
 router.post("/users/logout", [authRequired], logOut); //Desloguear un usuario
 
-router.delete("/users/:id", [authRequired, adminRequired], deleteUser); //Eliminar un usuario
+router.delete("/users/:id", [authRequired, adminRequired], deleteUser); //Eliminar un usuario ()
 
 export default router;

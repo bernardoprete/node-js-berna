@@ -3,6 +3,7 @@
 import { pool } from "../db.js"; // Vamos a utilizar el pool de conexiones
 import { crearTokenDeAcceso } from "../libs/jwt.js";
 import { UserModel } from "../models/users.model.js";
+import { createUserService } from "../services/user.services.js";
 import { compareStringHash, createError } from "../utils/utils.js";
 
 // CONSULTA DEL MODELO DE USUARIOS  - VER TODOS LOS USUARIOS (GET)
@@ -76,7 +77,7 @@ export const getUsersBySearch = async (req, res, next) => {
 
 export const createUser = async (req, res, next) => {
   try {
-    const user = await UserModel.create(req.body);
+    const user = await createUserService(req.body);
     res.status(201).json({ message: "Usuario creado con éxito.", user });
   } catch (err) {
     console.log(err);
@@ -115,15 +116,14 @@ export const updateUser = async (req, res, next) => {
 
 export const deleteUser = async (req, res, next) => {
   try {
-    const result = await UserModel.deleteUser(req.params.id);
+    await UserModel.deleteUser(req.params.id);
 
-    if (!result) {
-      return next(createError(404, "No se encontró al usuario a eliminar."));
-    }
+    return res.sendStatus(204);
 
-    res.sendStatus(204); // Usuario eliminado
   } catch (err) {
-    console.log("Error en deleteUser controller:", err.message);
+    console.log("Error en deleteUser controller:", err);
+
+    if (err.status) return next(err);
 
     next(
       createError(
@@ -133,6 +133,7 @@ export const deleteUser = async (req, res, next) => {
     );
   }
 };
+
 
 // AUTH PROCESS DE USUARIO - VERIFICAR UN USUARIO (DESPUES DE CREARLO)
 

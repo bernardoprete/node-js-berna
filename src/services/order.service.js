@@ -315,7 +315,7 @@ export const findItemsInOrderService = async (idPedido, idUsuario) => {
       throw createError(404, "No se encontró el pedido solicitado.");
     }
     if (pedido.idUsuario !== idUsuario) {
-      throw createError(403, "No tiene permiso para ver este pedido."); //EL user puede ver solo sus pedidos / IMPORTANTEEE.
+      throw createError(403, "No tiene permiso para ver este pedido."); //EL user puede ver solo sus pedidos / IMPORTANTEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
     }
     const products = await OrderProductsDetailsModel.findItemsInOrder(idPedido); //Esto me devuelve un array con productos adentro.
 
@@ -366,7 +366,6 @@ export const findOrderDetailsAdminService = async (idPedido) => {
 
     //  Devolvemos un objeto con toda la informacion junta.
     return {
-      ...order, // Todos los campos del pedido, usuario y dirección. Insertamos el array.
       productos, // Array con los productos del pedido.
       totalCalculado: totalCalculado.toFixed(2), // Total del pedido.
     };
@@ -384,7 +383,7 @@ export const findOrderDetailsAdminService = async (idPedido) => {
   }
 };
 
-//// SERVICIO QUE MUESTRA LA LOGICA PREVIA PARA TRAER/MOSTRAR TODOS LOS PEDIDOS DEL SISTEMA (CUALQUIER PEDIDO) PARA EL ADMINISTRADOR.
+// SERVICIO QUE MUESTRA LA LOGICA PREVIA PARA TRAER/MOSTRAR TODOS LOS PEDIDOS DEL SISTEMA (CUALQUIER PEDIDO) PARA EL ADMINISTRADOR.
 
 export const getAllOrdersSystemService = async (
   page,
@@ -428,16 +427,46 @@ export const getAllOrdersSystemService = async (
       console.log(fechaInicioSQL, fechaFinSQL);
     }
 
+    if (filters.estadoPago) {
+      whereConditions.push(`pe.estado_pago = ?`);
+      queryParams.push(filters.estadoPago);
+    }
+
+    if (filters.metodoPago) {
+      whereConditions.push(`pe.metodo_pago = ?`);
+      queryParams.push(filters.metodoPago);
+    }
+
+    if (filters.estadoPedido) {
+      whereConditions.push(`pe.estado = ?`);
+      queryParams.push(filters.estadoPedido);
+    }
+
+    if (filters.cliente) {
+      whereConditions.push(
+        `(u.nombre LIKE ? OR u.apellido LIKE ? OR u.email LIKE ?)`
+      );
+
+      const search = `%${filters.cliente}%`;
+      queryParams.push(search, search, search);
+    }
+
     // Concatenar las condiciones de busqueda (por defecto, si o si hay 1.)
     const whereClause =
       whereConditions.length > 0
         ? `WHERE ${whereConditions.join(" AND ")}`
         : "";
 
-    let orderClause = "ORDER BY fecha_pedido DESC"; // orden por defecto.
+    let orderClause = "ORDER BY pe.fecha_pedido DESC"; // orden por defecto.
 
     if (filters.sortBy) {
-      const validSortFields = ["fecha_pedido", "total"];
+      const validSortFields = [
+        "fecha_pedido",
+        "total",
+        "estado",
+        "metodo_pago",
+        "estado_pago",
+      ];
 
       const sortDirection = filters.sortDirection === "desc" ? "DESC" : "ASC";
 
@@ -453,6 +482,9 @@ export const getAllOrdersSystemService = async (
         .map((column) => `pe.${column}`),
       "d.direccionLinea1",
       "d.ciudad",
+      "u.nombre AS nombreUsuario",
+      "u.apellido AS apellidoUsuario",
+      "u.email AS emailUsuario",
     ].join(", ");
 
     const finalParams = [...queryParams, String(limit), String(offset)];

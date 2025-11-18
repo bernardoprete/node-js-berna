@@ -100,7 +100,7 @@ export const UserModel = {
     }
   },
 
-  //DESAROLLO DEL METODO CREATE (CREAR UN USUARIO) - POST  - Hecho nuevamente en clase 8/9
+  //DESAROLLO DEL METODO CREATE (CREAR UN USUARIO) - POST 
 
   create: async ({ nombre, apellido, fechaNacimiento, email, password }) => {
     try {
@@ -188,66 +188,67 @@ export const UserModel = {
   },
   // DESARROLLO DEL METODO VERIFY (VERIFICAR UN USUARIO)
 
-verify: async (id, code) => {
-  try {
-    // 1. Obtener los datos necesarios del usuario
-    const [rows] = await pool.execute(
-      "SELECT idUsuario, codigoVerificacion, emailVerificado, email, nombre FROM producto.usuario   WHERE idUsuario = ?",
-      [id]
-    );
+  verify: async (id, code) => {
+    try {
+      // 1. Obtener los datos necesarios del usuario
+      const [rows] = await pool.execute(
+        "SELECT idUsuario, codigoVerificacion, emailVerificado, email, nombre FROM producto.usuario   WHERE idUsuario = ?",
+        [id]
+      );
 
-    if (rows.length === 0)
-      throw createError(400, "Datos de validación incorrectos.");
+      if (rows.length === 0)
+        throw createError(400, "Datos de validación incorrectos.");
 
-    const user = rows[0];
+      const user = rows[0];
 
-    // 2. Verificar si el usuario ya estaba verificado
-    if (user.emailVerificado)
-      throw createError(400, "El email ya está verificado.");
+      // 2. Verificar si el usuario ya estaba verificado
+      if (user.emailVerificado)
+        throw createError(400, "El email ya está verificado.");
 
-    // 3. Comparar el código ingresado con el código hasheado en BD
-    const matchCode = await compareStringHash(code, user.codigoVerificacion);
+      // 3. Comparar el código ingresado con el código hasheado en BD
+      const matchCode = await compareStringHash(code, user.codigoVerificacion);
 
-    if (!matchCode)
-      throw createError(400, "Código de verificación incorrecto.");
+      if (!matchCode)
+        throw createError(400, "Código de verificación incorrecto.");
 
-    // 4. Actualizar estado del usuario → verificado
-    const [result] = await pool.execute(
-      "UPDATE producto.usuario SET emailVerificado = true, codigoVerificacion = NULL WHERE idUsuario = ?",
-      [id]
-    );
+      // 4. Actualizar estado del usuario → verificado
+      const [result] = await pool.execute(
+        "UPDATE producto.usuario SET emailVerificado = true, codigoVerificacion = NULL WHERE idUsuario = ?",
+        [id]
+      );
 
-    if (result.affectedRows === 0)
-      throw createError(500, "No se pudo actualizar el estado del usuario.");
+      if (result.affectedRows === 0)
+        throw createError(500, "No se pudo actualizar el estado del usuario.");
 
-    // 5. Enviar email de confirmación
-    const emailHtml = `
+      // 5. Enviar email de confirmación
+      const emailHtml = `
       <h2 style="font-family:sans-serif;">Hola ${user.nombre} 👋</h2>
       <p>Tu cuenta fue verificada con éxito.</p>
       <p>Ya podés iniciar sesión y usar todos los servicios.</p>
     `;
 
-    const emailSend = await sendEmailService(
-      user.email,
-      "✔ Cuenta verificada con éxito",
-      emailHtml
-    );
+      const emailSend = await sendEmailService(
+        user.email,
+        "✔ Cuenta verificada con éxito",
+        emailHtml
+      );
 
-    // Si falló el envío del email → No romper el flujo
-    if (!emailSend) {
-      console.log("⚠️ Advertencia: No se pudo enviar el email de confirmación.");
-      // ⚠️ PERO IGUAL devolvemos OK, porque el usuario ya está verificado
+      // Si falló el envío del email → No romper el flujo
+      if (!emailSend) {
+        console.log(
+          "⚠️ Advertencia: No se pudo enviar el email de confirmación."
+        );
+        // ⚠️ PERO IGUAL devolvemos OK, porque el usuario ya está verificado
+      }
+
+      // 6. Retornamos true si se verificó correctamente
+      return true;
+    } catch (error) {
+      console.log("❌ Error al intentar verificar el usuario:");
+      console.log(error);
+      throw error;
     }
-
-    // 6. Retornamos true si se verificó correctamente
-    return true;
-
-  } catch (error) {
-    console.log("❌ Error al intentar verificar el usuario:");
-    console.log(error);
-    throw error;
-  }
-},
+  },
 
   //DESAROLLO DEL METODO DELETE (BORRAR UN USUARIO)
 
@@ -258,13 +259,16 @@ verify: async (id, code) => {
         [id]
       );
 
+      // Si NO eliminó nada:
       if (result.affectedRows === 0) {
-        throw createError(400, "El usuario no ha podido ser eliminado");
+        throw createError(404, "No existe un usuario con ese ID.");
       }
 
-      return result.affectedRows > 0; // true si eliminó, false si no
+      // Si eliminó, todo OK
+      return true;
     } catch (error) {
-      console.error("Error al eliminar usuario:", error);
+      console.error("Error real al eliminar usuario:", error);
+      // Si viene el error por FKs, MySQL da ER_ROW_IS_REFERENCED
       throw error;
     }
   },
