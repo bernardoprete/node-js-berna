@@ -1,7 +1,5 @@
 import { pool } from "../db.js";
-import bcrypt from "bcryptjs";
-import { compareStringHash, createError, hashString } from "../utils/utils.js";
-import crypto from "crypto";
+import { compareStringHash, createError } from "../utils/utils.js";
 import { sendEmailService } from "../services/email.service.js";
 
 export const UserModel = {
@@ -100,42 +98,20 @@ export const UserModel = {
     }
   },
 
-  //DESAROLLO DEL METODO CREATE (CREAR UN USUARIO) - POST 
+  //DESAROLLO DEL METODO CREATE (CREAR UN USUARIO) - POST
 
-  create: async ({ nombre, apellido, fechaNacimiento, email, password }) => {
+  create: async (
+    { nombre, apellido, fechaNacimiento, email, hashPassword, hashCode },
+    connection
+  ) => {
     try {
-      // F_9vRRENGyCvKVcGdijFTwoYCDg0HCzj
-      const hashPassword = await hashString(password);
-
-      const verificactionCode = crypto.randomBytes(24).toString("base64url"); //  Codigo alfanumerico aleatorio que creo para poder precisamente crear el codigo de verificacion. Esto hay que enviarle por mail al usuario para que se verifique.
-      console.log(verificactionCode);
-
-      const hashCode = await hashString(verificactionCode); //Aqui hasheamos ese codigo.
-
-      const [result] = await pool.execute(
-        "INSERT INTO producto.usuario (nombre,apellido,fechaNacimiento,email,idRol,password, codigoVerificacion) VALUES (?,?,?,?,?,?,?)", //Esto estodo lo que queda guardado en la bd.
+      const [result] = await connection.execute(
+        "INSERT INTO producto.usuario (nombre,apellido,fechaNacimiento,email,idRol,password, codigoVerificacion) VALUES (?,?,?,?,?,?,?)", //Esto es todo lo que queda guardado en la bd.
         [nombre, apellido, fechaNacimiento, email, 1, hashPassword, hashCode]
       );
       const idUser = result.insertId;
-      console.log(
-        `www.dominiomipagina.com/api/users/verify?id=${idUser}&code=${verificactionCode}` //Lo que hay que enviar por email finalmente.
-      );
 
-      //  Enviamos al  usuario con el codigo de verificacion.
-      const emailSend = await sendEmailService(
-        email,
-        "Verificación de cuenta",
-        `<h2>${nombre}, este es tu código de verificación:</h2>
-         <p><b>${verificactionCode}</b></p>
-         <p>Ingresalo en la página para activar tu cuenta.</p>`
-      );
-      if (!emailSend)
-        throw createError(
-          500,
-          "Error al intentar enviar el email de notificación."
-        );
-
-      const [rows] = await pool.execute(
+      const [rows] = await connection.execute(
         "SELECT idUsuario, nombre,apellido,email,idRol FROM producto.usuario WHERE idUsuario = ?", //Esto es lo que se muestra en la bd cuando insertamos el nuevo usaurio.
         [idUser]
       );

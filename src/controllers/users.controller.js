@@ -73,7 +73,7 @@ export const getUsersBySearch = async (req, res, next) => {
   }
 };
 
-//CREAR UN USARIO
+//CREAR UN USUARIO
 
 export const createUser = async (req, res, next) => {
   try {
