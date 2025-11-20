@@ -21,7 +21,7 @@ export const createUserService = async ({
     const hashPassword = await hashString(password);
 
     const verificactionCode = crypto.randomBytes(24).toString("base64url"); //  Codigo alfanumerico aleatorio que creo para poder precisamente crear el codigo de verificacion. Esto hay que enviarle por mail al usuario para que se verifique.
-    console.log(verificactionCode);
+    console.log(verificactionCode );
 
     const hashCode = await hashString(verificactionCode); //Aqui hasheamos ese codigo.
 
@@ -30,21 +30,33 @@ export const createUserService = async ({
       connection
     );
 
+    await connection.commit(); //Todo lo que pasa despeus del commit no puede volverse atras en SQL. Haaciend
+    //Pongo e commit antes de enviar el mail para qque si no se crea el user no se mande el mail, el mail se envia si o si si el user es creado.
+    //La contra es que el user queda creado igual (perono verificado) - Aqui se podria hacer que el user ponga "reenviar codigo" haciendo otro endpoint. DUDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+
     //  Enviamos al  usuario con el codigo de verificacion.
+
+    // seteamos los datos que queremos mostrar en el template de envio de mail
+    const emailContent = {
+      title: "¡Verificacion de usuario!",
+      message: `Para poder verificar tu usuario e ingresar al sistema, haz el click en el siguiente link`,
+      link: {
+        linkURL: `http://localhost:3001/api/users/verify?id=${user.idUsuario}&code=${verificactionCode}`,
+        linkText: "Verificar usuario",
+      },
+    };
+
     const emailSend = await sendEmailService(
       email,
       "Verificación de cuenta",
-      `<h2>${nombre}, este es tu código de verificación:</h2>
-                   <p><b>${verificactionCode}</b></p>
-                   <p>Ingresalo en la página para activar tu cuenta.</p>`
+      emailContent
     );
     if (!emailSend)
       throw createError(
         500,
         "Error al intentar enviar el email de notificación."
       );
-
-    await connection.commit();
 
     return user;
   } catch (error) {

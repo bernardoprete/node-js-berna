@@ -121,6 +121,7 @@ export const OrderModel = {
       observaciones = null,
       idUsuario,
       idDireccion,
+      estado_pago
     },
     connection
   ) {
@@ -145,6 +146,7 @@ export const OrderModel = {
         observaciones,
         idUsuario,
         idDireccion,
+        estado_pago
       ];
 
       const sql = `INSERT INTO ${this.tablename} (${columns.join(

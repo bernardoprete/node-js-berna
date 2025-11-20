@@ -162,7 +162,7 @@ export const UserModel = {
       throw error;
     }
   },
-  // DESARROLLO DEL METODO VERIFY (VERIFICAR UN USUARIO)
+  // DESARROLLO DEL METODO VERIFY (VERIFICAR UN USUARIO) --HABRIA QUE HACER UN SERIVICO (19/11/25)
 
   verify: async (id, code) => {
     try {
@@ -197,16 +197,20 @@ export const UserModel = {
         throw createError(500, "No se pudo actualizar el estado del usuario.");
 
       // 5. Enviar email de confirmación
-      const emailHtml = `
-      <h2 style="font-family:sans-serif;">Hola ${user.nombre} 👋</h2>
-      <p>Tu cuenta fue verificada con éxito.</p>
-      <p>Ya podés iniciar sesión y usar todos los servicios.</p>
-    `;
+      // seteamos los datos que queremos mostrar en el template de envio de mail
+      const emailContent = {
+        title: "¡Notificacion de nuevo usuario!",
+        message: `Felicitaciones, haz creado tu nuevo usuario correctamente, ya podes disfrutar de nuestros servicios`,
+        link: {
+          linkURL: `http://localhost:3001/api`,
+          linkText: "Accede a la app",
+        },
+      };
 
       const emailSend = await sendEmailService(
         user.email,
         "✔ Cuenta verificada con éxito",
-        emailHtml
+        emailContent
       );
 
       // Si falló el envío del email → No romper el flujo

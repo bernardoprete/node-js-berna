@@ -86,6 +86,7 @@ export const createOrderService = async (
         total,
         idUsuario,
         idDireccion,
+        estado_pago:"pendiente"
       },
       connection
     );
@@ -138,20 +139,29 @@ export const createOrderService = async (
       connection
     );
 
-    // 6.5 envíamos un email de éxito al usuario.
+  // 6.5 envíamos un email de éxito al usuario.
     // extraigo el email del usuario
     const user = await UserModel.findByID(idUsuario);
+
+    // seteamos los datos que queremos mostrar en el template
+    const emailContent = {
+      title: "¡Pedido procesado con éxito!",
+      message: "Hemos recibido tu pedido, a la brevedad obtendras más información sobre como proseguir",
+      link: {
+        linkURL: 'http://localhost:3001/mis-compras',
+        linkText: 'Mis compras'
+      }
+    }
     const emailSend = await sendEmailService(
       user.email,
       "Orden procesada",
-      "<h2>Felicitaciones, tu pedido fue procesado.</h2>"
+      emailContent
     );
     if (!emailSend)
       throw createError(
         500,
         "Error al intentar enviar el email de notificación."
       );
-
     // 7. Si salio todo bien, confirmar la transacción (COMMIT) SI falla algo antes de este punto se ejecuta el rollback.
     await connection.commit();
 
