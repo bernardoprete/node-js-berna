@@ -20,23 +20,23 @@ export const createUserService = async ({
 
     const hashPassword = await hashString(password);
 
+    const user = await UserModel.create(
+      {
+        nombre,
+        apellido,
+        fechaNacimiento,
+        email,
+        hashCode: null,
+        hashPassword,
+      },
+      connection
+    );
     const verificactionCode = crypto.randomBytes(24).toString("base64url"); //  Codigo alfanumerico aleatorio que creo para poder precisamente crear el codigo de verificacion. Esto hay que enviarle por mail al usuario para que se verifique.
-    console.log(verificactionCode );
+    console.log(verificactionCode);
 
     const hashCode = await hashString(verificactionCode); //Aqui hasheamos ese codigo.
 
-    const user = await UserModel.create(
-      { nombre, apellido, fechaNacimiento, email, hashCode, hashPassword },
-      connection
-    );
-
-    await connection.commit(); //Todo lo que pasa despeus del commit no puede volverse atras en SQL. Haaciend
-    //Pongo e commit antes de enviar el mail para qque si no se crea el user no se mande el mail, el mail se envia si o si si el user es creado.
-    //La contra es que el user queda creado igual (perono verificado) - Aqui se podria hacer que el user ponga "reenviar codigo" haciendo otro endpoint. DUDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-
-
-    //  Enviamos al  usuario con el codigo de verificacion.
-
+    const userUpdate = await UserModel.updatePartial(user.idUsuario, {codigoVerificacion:hashCode}, connection)
     // seteamos los datos que queremos mostrar en el template de envio de mail
     const emailContent = {
       title: "¡Verificacion de usuario!",
@@ -52,20 +52,21 @@ export const createUserService = async ({
       "Verificación de cuenta",
       emailContent
     );
-    if (!emailSend)
-      throw createError(
-        500,
-        "Error al intentar enviar el email de notificación."
-      );
 
-    return user;
+    await connection.commit(); //Todo lo que pasa despeus del commit no puede volverse atras en SQL. Haaciend
+    //Pongo e commit antes de enviar el mail para qque si no se crea el user no se mande el mail, el mail se envia si o si si el user es creado.
+    //La contra es que el user queda creado igual (perono verificado) - Aqui se podria hacer que el user ponga "reenviar codigo" haciendo otro endpoint. DUDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+    //  Enviamos al  usuario con el codigo de verificacion.
+
+    return user; //Lo dejamos por ahora pero no es necesario tener toda la data aca. 
   } catch (error) {
     if (connection) {
       await connection.rollback();
       console.log("Transacción revertida (ROLLBACK)");
     }
 
-    console.log("ERROR REAL:", error);
+    console.log("ERROR", error);
 
     if (error.status) throw error;
     throw createError(500, "Error interno al intentar crear el usuario.");

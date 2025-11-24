@@ -125,7 +125,7 @@ export const UserModel = {
 
   //METODO PARA MODIFICAR PARCIALMENTE DATOS - (PUT)
 
-  updatePartial: async (id, updateData) => {
+  updatePartial: async (id, updateData, connection = pool) => {
     /* 
             updateData= {
                 nombre = "Pedro",
@@ -144,7 +144,7 @@ export const UserModel = {
       const setData = fields.map((field) => `${field} = ?`).join(", "); // Unimos la data con una , para hacer la consulta sql.
       // campo = ?, otroCampo = ?
       const sql = `UPDATE usuario SET ${setData} WHERE idUsuario = ?`;
-      const [result] = await pool.execute(sql, [...values, id]); // ... Spread -> "vuelco" los VALORES del arreglo values, dentro de un arreglo, y al final, agrego el id como un nuevo elemento, entonces, ["valor1","valor2", 32]; -> Si pongo values sin spread -> [["valor1","valor2"], 32]
+      const [result] = await connection.execute(sql, [...values, id]); // ... Spread -> "vuelco" los VALORES del arreglo values, dentro de un arreglo, y al final, agrego el id como un nuevo elemento, entonces, ["valor1","valor2", 32]; -> Si pongo values sin spread -> [["valor1","valor2"], 32]
       console.log(sql);
 
       // chequeamos si se actualizo correctamente

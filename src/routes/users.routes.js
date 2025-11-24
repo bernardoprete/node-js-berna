@@ -15,6 +15,8 @@ import { validateSchema } from "../middlewares/validationSchemas.middleware.js";
 import { createUserSchema } from "../schemas/userSchema.js";
 import { updateUserSchema } from "../schemas/userSchema.js";
 import { authRequired, adminRequired } from "../middlewares/auth.middleware.js";
+import { changePasswordSchema } from "../schemas/changePasswordSchema.js";
+import { changePasswordLogged } from "../controllers/changePasswordLogged.controller.js";
 
 const router = Router();
 
@@ -27,6 +29,13 @@ router.get("/users/verify", verifyUser);
 router.get("/users/:id", [authRequired, adminRequired], getUserByID); // La funcion o metodo GetUserById la obtengo del controlador y usa adentro la logica de la funcion FindById que la traigo del modelo de usuarios.
 
 router.post("/users", validateSchema(createUserSchema), createUser); //Crear un usuario con todas las validaciones que hicemos mediante los esquemas.
+
+router.post(
+  "/users/change-password",
+  authRequired, //solo logueados
+  validateSchema(changePasswordSchema), // Zod después
+  changePasswordLogged
+);
 
 router.patch(
   "/users/:id",

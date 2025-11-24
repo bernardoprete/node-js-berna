@@ -34,18 +34,17 @@ Una base de datos es una coleccion organizada de datos, que se almacenan eletró
 
     - Claves Primarias (Primary Key - PK): Es una columna o un conjunto de ellas (clave compuesta), contiene valores unicos para cada fila, la idea es representar/identificar de forma unica dada registro.
 
-        - Carácteristicas:  
+        - Carácteristicas:
             - Deben ser valores únicos (no duplicados)
             - No pueden ser valores nulos (vacíos).
             - Solo se puede tener una clave primaria.
             - Ej: id_cliente o idCliente.
-    
+
     - Claves foraneas (Foreign Key - FK): Es una columna o conjuntos de ellas (dentro de la tabla 'hija') que hace referencia a la Clave Primaria de otra tabla (la tabla padre). Establece una relacion entre ambas, asegurando la integridad referencial de los datos y nos permite evitar redundancias.
 
     Ej: Tenemos una tabla Pedidos y una tabla Clientes, queremos asociar un pedido con un cliente, podemos relacionarlas a través de una clave foranea en la tabla padre (Pedidos), creamos un campo llamado idCliente y lo definimos como clave foranea que va a hacer referencia a la tabla Clientes.
 
-    Entonces, en el Pedido 332, vamos a relacionar el Cliente 55 (PK de la tabla 'padre'). 
-
+    Entonces, en el Pedido 332, vamos a relacionar el Cliente 55 (PK de la tabla 'padre').
 
 <br>
 
@@ -54,7 +53,6 @@ Nos permiten cubrir necesidades de escalabilidad y flexibilidad, se utiliza much
 Datos / Documentos que no están sujetas a un esquema rigido, es decir, que cada uno de ellos pueden contener diferentes campos.
 
 Ej: producto que tenga diferentes caracteristicas, una remera que posea diferentes colores, talles, pero tambien puedo tener otro producto que no posea esas caracteristicas.
-
 
 <br>
 
@@ -74,23 +72,19 @@ Los RDBMS (Relational database Management Systems): son el software que nos perm
 
     - PostgreSQL: Destaca por su robustez, cumplimiento de estandares, y potencia las caracteresticas que ya pose MySQL. Es un sistema de gestiñon de bases de datos relacionales orientado a objetos, nos brinda una mayor flexibilidad y un conjunto de herramientas más amplias. Principalmente en la variedad de tipos de datos que puede almacenar.
 
-    - SQL Server: Es muy similar a MySQL, se utiliza principalmente en entornos 'empresariales' que utilizan principalmentes tecnologías de Microsoft. 
-
+    - SQL Server: Es muy similar a MySQL, se utiliza principalmente en entornos 'empresariales' que utilizan principalmentes tecnologías de Microsoft.
 
 ### Interfaz gráfica de usuarios (GUIs): Interfaces que nos permiten gestionar de manera visual nuestra BD.
 
     - Phpmyadmin, Workbench, HeideSQL, pgAdmin..
 
-
 ## Conceptos teóricos fundamentales (SQL)
 
-
 ### Tipos de comandos SQL
-    
+
     - DDL (Data Definition Language - Lenguaje de definición de datos): Se utilizan para definir y modificar la estructura de la base datos y sus objetos (tablas, indices, vistas, etc..). Ej: CREATE TABLE, ALTER TABLER, DROP TABLE.
 
     - DML (Data Manipulation Language - Lenguaje de Manipulación de datos): Se utilizan para manipular los datos dentro de las tablas de la BD. Ej: INSERT, SELECT, UPDATE, DELETE.
-
 
 ### Diagrama Entidad-Relación (E-R)
 
@@ -100,7 +94,7 @@ El **modelo Entidad-Relacion** es una herramienta que se utiliza para diseñar l
 
     - Atributos: Las propiedades/caracteristicas que descrien a una entidad (nombre, apellido, email,etc.). Se representan con ovalos conectados a las entidades.
 
-    - Cardinalidad: Indica el tipo de relación entre tablas, define el numero de instancias que una entidad relaciona con otra. 
+    - Cardinalidad: Indica el tipo de relación entre tablas, define el numero de instancias que una entidad relaciona con otra.
         - Uno a uno: Indica que una entidad está relacionada con otra una unica vez. (1:1)
         - De uno a muchos: Significa que una instancia de una entidad está relacionada muchas veces a otra entidad. (1:N)
         - Muchos a muchos: Indica que por ej, muchas peliculas puedes estar alquiladas, y que muchos alquileres pueden alquilar una pelicula. (N:M)
@@ -109,10 +103,9 @@ El **modelo Entidad-Relacion** es una herramienta que se utiliza para diseñar l
 
     - Clave Primaria (PK): Uno o más atributos que identificar de forma única cada registro de la tabla. Se representa subrayando el nombre del atributo.
 
-
 ### Modelo Relacional:
 
-A diferencia del DER conceptual el cual utiliza ovalos y rombos para atributos y relaciones correspondientemente, este diagrama/modelo utiliza la información para asemejarse más a las tablas reales (fisicas) de una BD. Nos va a servir para representar directamente las tablas, sus columnas (y tipo de datos), y la relación entre ellas, también cardinalidad para especificar la depedencia de datos y como se mantiene la intregridad referencial. Además sirve como 'blueprint' para la creación real de la BD en un sistema de gestión de BD. 
+A diferencia del DER conceptual el cual utiliza ovalos y rombos para atributos y relaciones correspondientemente, este diagrama/modelo utiliza la información para asemejarse más a las tablas reales (fisicas) de una BD. Nos va a servir para representar directamente las tablas, sus columnas (y tipo de datos), y la relación entre ellas, también cardinalidad para especificar la depedencia de datos y como se mantiene la intregridad referencial. Además sirve como 'blueprint' para la creación real de la BD en un sistema de gestión de BD.
 
     - Entidades (tablas): Siguen siendo objetos del mundo real, pero se preresentan como rectángulos que se dividen para simular la tabla y sus columnas.
 
@@ -127,7 +120,7 @@ A diferencia del DER conceptual el cual utiliza ovalos y rombos para atributos y
         - Bool
         - Text: un texto mucho más amplio de lo que permite varchar.
         - etc..
-    
+
     - Las claves primarias, se definen dentro de los primeros atributos.
 
     - Las claves foraneas, al final de los atributos de esa entidad, podemos especificar entre parentesis que es una (FK)
@@ -136,17 +129,14 @@ A diferencia del DER conceptual el cual utiliza ovalos y rombos para atributos y
 
     - Cardinalidad se especifica con un tipo de flecha especifico 'pata de gallo', este ultimo significa la parte de 'muchos'.
 
-
 ### Tarea 12/09.
 
     -  En base al findOne, desarrollar un método findAllBySearch() -> para poder filtrar uno o más usuarios (devolver un listado.).
     - Validar que para ciertas acciones el usuario este logueado y sea ADMIN. tener en en cuenta que el campo para verificar rol es numerico y se llama idRol.
 
-
-
 ### Implementación de transacciones en mysql2:
 
-    1. Obtener una conexión 'exclusiva': Para poder obtener una conexion exclusiva vamos a utilizar el método getConnection() sobre el pool, y dentro de un bloque try..catch..finally. 
+    1. Obtener una conexión 'exclusiva': Para poder obtener una conexion exclusiva vamos a utilizar el método getConnection() sobre el pool, y dentro de un bloque try..catch..finally.
     2. Iniciar la transacción: debemos llamar a connection.beginTransaction();
     3. Ejecutar consultas SQL: Ejecutamos todas las consultas utilizando la conexion exclusiva.
     4. Confirmar o deshacer: Si todas las consultas se ejecuta forma exitosa, vamos a llamar a connection.commit(). Si hay algún error, se llama a connection.rollback().
@@ -172,21 +162,36 @@ A diferencia del DER conceptual el cual utiliza ovalos y rombos para atributos y
 
 - Cliente:
 
-    - Filtrar por nombre, y descripción del producto. -> LIKES 
-    - Filtrar por categoría del producto -> Estricta ==
-    - Filtrar entre fechas (fecha_pedido) -> BETWEEN -> 04-11-2025 AND 04-10-2025.
-    - Ordenar por fecha -> Order By fecha_pedido DESC por defecto.
-    - Order por totales (opcional). Order By total DESC.
+  - Filtrar por nombre, y descripción del producto. -> LIKES
+  - Filtrar por categoría del producto -> Estricta ==
+  - Filtrar entre fechas (fecha_pedido) -> BETWEEN -> 04-11-2025 AND 04-10-2025.
+  - Ordenar por fecha -> Order By fecha_pedido DESC por defecto.
+  - Order por totales (opcional). Order By total DESC.
 
-- Admin: 
+- Admin:
 
-    - Filtrar por clientes (nombre , apellido, email).
-    - Filtrar por fecha pedido. (Entre - Between)
-    - Filtrar por categoría del producto -> Estricta ==
-    - Filtrar por nombre, y descripción del producto. -> LIKES
-    - Filtrar por Estado de Pago (pendiente, confirmado, rechazado).
-    - Filtrar por Método de pago (efectivo, transferencia, plataformas..)
-    - Filtrar por estado pedido (pendiente','procesando','enviado','entregado','cancelado') 
-    - Ordenar por fechas, totales, estado de pago, estado pedido, método de pago.
+  - Filtrar por clientes (nombre , apellido, email).
+  - Filtrar por fecha pedido. (Entre - Between)
+  - Filtrar por categoría del producto -> Estricta ==
+  - Filtrar por nombre, y descripción del producto. -> LIKES
+  - Filtrar por Estado de Pago (pendiente, confirmado, rechazado).
+  - Filtrar por Método de pago (efectivo, transferencia, plataformas..)
+  - Filtrar por estado pedido (pendiente','procesando','enviado','entregado','cancelado')
+  - Ordenar por fechas, totales, estado de pago, estado pedido, método de pago.
 
-    - ** Podriamos filtrar por ciudad, provincia.
+  - \*\* Podriamos filtrar por ciudad, provincia.
+
+  ## Actividades 21/11
+
+  - Desarrollar la funcionalidad para poder restablecer la contraseña del usuario.
+
+    - Desde el front, se solicita restablecer la contraseña en base a un email (se envia en el body hacia el front, hacia una ruta especifica).
+    - Back: verifica que ese email exista, debe generar un codigo a enviar a ese email (pueder un codigo numerico aleatorio de 6 digitos, OTRA opción es directamente envíar un link con un codigo incrustrado el cual el front va a recibir y mostrar la vista correspondiente.).
+
+    - Para cualquier de las opciones, se debe crear un nuevo campo en la tabla usuario similar a recoveryCode (aca va el codigo encriptado), expireRecoveryCode (generalmente se dan 10 minutos de validación.) -> Lo mas recomendable ya que tenemos varios codigos (EMAIL VERIFICACION, PASSWORD RECOVERY), es tener un tabla aparte exclusiva para los codigos.
+
+    - ejemplo opcion 1: enviar el codigo numerico al email ej: 324565. ACA EL USUARIO DEBE INGRESAR MANUALMENTE EL CODIGO.
+    - ejemplo opcion 2: wwww.dominio.com/recoverypassword?codigo=asdjaskdjkaj2313291231uasdashdasda&id=32
+      te pide password y password confirm, y envia al back los 3 datos, y el email.
+
+  - Opcional: verificar que para loguearse y registrarse, no hay ningun usuario logueado en el sistema.

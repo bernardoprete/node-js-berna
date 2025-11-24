@@ -8,6 +8,7 @@ import { UserModel } from "../models/users.model.js";
 import { createError } from "../utils/utils.js";
 import { findItemsInCartService } from "./cart.service.js";
 import { sendEmailService } from "../services/email.service.js";
+import { AddressModel } from "../models/address.model.js";
 
 //SERVICIO  QUE TIENE LA LOGICA PREVIA NECESARIA PARA CREAR UN PEDIDO Y AGREGAR LOS PRODUCTOS CORRESPONDIENTES AL MISMO.
 
@@ -27,6 +28,8 @@ export const createOrderService = async (
     const carrito = await CartModel.findOne({ idUsuario }); //Es necesario buscar el carrito del usuario que esta navegando.
     if (!carrito)
       throw createError(400, "El usuario no posee un carrito activo."); //Sino existe ningun carrito con ese id de usuario, lanzamos un error.
+
+    await AddressModel.checkUserAddress(idDireccion, idUsuario); //Linea para verificar que la direccion a la que se envia el pedido sea efectivamente del usuario logueado.
 
     const { products, total } = await findItemsInCartService(carrito.idCarrito); //Desestructutacion
 
@@ -86,11 +89,13 @@ export const createOrderService = async (
         total,
         idUsuario,
         idDireccion,
-        estado_pago:"pendiente"
+        estado_pago: "pendiente",
       },
       connection
     );
     const idPedido = newOrder.idPedido; //Id del pedido creado. Importantee
+
+    //LLAMAR AQUI AL METODO NUEVO QUE CREARE (METODO EN ADDRESS MODEL)
 
     //Ahora los productos que teniamos en el carrito y que son parte de este nuevo pedido hay que agregarlos al detalle del pedido , pero para eso debemos crear el detalle del pedido (hacer un INSERT INTO en la tabla detallepedido) e ir copiando cada producto que tenemos en el carrito y agregarlo a esa tabla. MUY IMPORTANTE -
 
@@ -139,19 +144,20 @@ export const createOrderService = async (
       connection
     );
 
-  // 6.5 envíamos un email de éxito al usuario.
+    // 6.5 envíamos un email de éxito al usuario.
     // extraigo el email del usuario
     const user = await UserModel.findByID(idUsuario);
 
     // seteamos los datos que queremos mostrar en el template
     const emailContent = {
       title: "¡Pedido procesado con éxito!",
-      message: "Hemos recibido tu pedido, a la brevedad obtendras más información sobre como proseguir",
+      message:
+        "Hemos recibido tu pedido, a la brevedad obtendras más información sobre como proseguir",
       link: {
-        linkURL: 'http://localhost:3001/mis-compras',
-        linkText: 'Mis compras'
-      }
-    }
+        linkURL: "http://localhost:3001/mis-compras",
+        linkText: "Mis compras",
+      },
+    };
     const emailSend = await sendEmailService(
       user.email,
       "Orden procesada",

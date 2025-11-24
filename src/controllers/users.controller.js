@@ -1,5 +1,3 @@
-//LOGICA DE LA APP
-
 import { pool } from "../db.js"; // Vamos a utilizar el pool de conexiones
 import { crearTokenDeAcceso } from "../libs/jwt.js";
 import { UserModel } from "../models/users.model.js";
@@ -119,7 +117,6 @@ export const deleteUser = async (req, res, next) => {
     await UserModel.deleteUser(req.params.id);
 
     return res.sendStatus(204);
-
   } catch (err) {
     console.log("Error en deleteUser controller:", err);
 
@@ -133,7 +130,6 @@ export const deleteUser = async (req, res, next) => {
     );
   }
 };
-
 
 // AUTH PROCESS DE USUARIO - VERIFICAR UN USUARIO (DESPUES DE CREARLO)
 
@@ -165,6 +161,19 @@ export const loginUser = async (req, res, next) => {
   const { email, password } = req.body;
   try {
     const user = await UserModel.findOne({ email });
+
+    //Antes de loguear un usuario debo asegurarme que otro usuario no este logueado.
+
+    // Si ya existe un token en la cookie, no permitir login
+    if (req.cookies?.token) {
+      return next(
+        createError(
+          400,
+          "Ya hay una sesion activa. Cierre sesion para continuar."
+        )
+      );
+    }
+
     // Primer paso: Validar los datos del usuario
     if (!user) throw createError(400, "El email ingresado es incorrecto");
     if (!user.emailVerificado)
