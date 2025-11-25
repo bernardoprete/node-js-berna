@@ -1,6 +1,7 @@
 import { createError } from "../utils/utils.js";
 import { UserModel } from "../models/users.model.js";
 import bcrypt from "bcryptjs";
+import { logOut } from "./users.controller.js";
 
 // CAMBIAR CONTRASEÑA ESTANDO LOGUEADO
 // Este método permite que un usuario logueado cambie su propia contraseña.
@@ -42,9 +43,12 @@ export const changePasswordLogged = async (req, res, next) => {
     //Guardar nueva contraseña en la BD
     await UserModel.updatePartial(idUsuario, { password: hashed });
 
+    res.clearCookie("token"); //Cerramos sesion.
+
     //Respuesta final
     res.status(200).json({
-      message: "Contraseña cambiada con exito.",
+      message:
+        "Contraseña cambiada con exito. Vuelva a iniciar sesion nuevamente.",
     });
   } catch (err) {
     if (err.status) return next(err);

@@ -162,71 +162,32 @@ export const UserModel = {
       throw error;
     }
   },
-  // DESARROLLO DEL METODO VERIFY (VERIFICAR UN USUARIO) --HABRIA QUE HACER UN SERIVICO (19/11/25)
 
-  verify: async (id, code) => {
+  // DESARROLLO DEL METODO VERIFY (VERIFICAR UN USUARIO)
+
+  verify: async (idUsuario) => {
     try {
-      // 1. Obtener los datos necesarios del usuario
       const [rows] = await pool.execute(
-        "SELECT idUsuario, codigoVerificacion, emailVerificado, email, nombre FROM producto.usuario   WHERE idUsuario = ?",
-        [id]
+        "SELECT idUsuario, codigoVerificacion, emailVerificado, email, nombre FROM usuario WHERE idUsuario = ?",
+        [idUsuario]
       );
 
-      if (rows.length === 0)
-        throw createError(400, "Datos de validación incorrectos.");
+      return rows[0] || null;
+    } catch (err) {
+      throw err;
+    }
+  },
 
-      const user = rows[0];
-
-      // 2. Verificar si el usuario ya estaba verificado
-      if (user.emailVerificado)
-        throw createError(400, "El email ya está verificado.");
-
-      // 3. Comparar el código ingresado con el código hasheado en BD
-      const matchCode = await compareStringHash(code, user.codigoVerificacion);
-
-      if (!matchCode)
-        throw createError(400, "Código de verificación incorrecto.");
-
-      // 4. Actualizar estado del usuario → verificado
+  // METODO PARA ACTUALIZAR LA VERIFICACION EN LA BD.
+  markAsVerified: async (idUsuario) => {
+    try {
       const [result] = await pool.execute(
-        "UPDATE producto.usuario SET emailVerificado = true, codigoVerificacion = NULL WHERE idUsuario = ?",
-        [id]
+        "UPDATE usuario SET emailVerificado = 1 , codigoVerificacion = NULL WHERE idUsuario = ?",
+        [idUsuario]
       );
-
-      if (result.affectedRows === 0)
-        throw createError(500, "No se pudo actualizar el estado del usuario.");
-
-      // 5. Enviar email de confirmación
-      // seteamos los datos que queremos mostrar en el template de envio de mail
-      const emailContent = {
-        title: "¡Notificacion de nuevo usuario!",
-        message: `Felicitaciones, haz creado tu nuevo usuario correctamente, ya podes disfrutar de nuestros servicios`,
-        link: {
-          linkURL: `http://localhost:3001/api`,
-          linkText: "Accede a la app",
-        },
-      };
-
-      const emailSend = await sendEmailService(
-        user.email,
-        "✔ Cuenta verificada con éxito",
-        emailContent
-      );
-
-      // Si falló el envío del email → No romper el flujo
-      if (!emailSend) {
-        console.log(
-          "⚠️ Advertencia: No se pudo enviar el email de confirmación."
-        );
-        // ⚠️ PERO IGUAL devolvemos OK, porque el usuario ya está verificado
-      }
-
-      // 6. Retornamos true si se verificó correctamente
-      return true;
-    } catch (error) {
-      console.log("❌ Error al intentar verificar el usuario:");
-      console.log(error);
-      throw error;
+      return result.affectedRows > 0;
+    } catch (err) {
+      throw err;
     }
   },
 

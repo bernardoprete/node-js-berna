@@ -1,7 +1,10 @@
 import { pool } from "../db.js"; // Vamos a utilizar el pool de conexiones
 import { crearTokenDeAcceso } from "../libs/jwt.js";
 import { UserModel } from "../models/users.model.js";
-import { createUserService } from "../services/user.services.js";
+import {
+  createUserService,
+  verifyUserService,
+} from "../services/user.services.js";
 import { compareStringHash, createError } from "../utils/utils.js";
 
 // CONSULTA DEL MODELO DE USUARIOS  - VER TODOS LOS USUARIOS (GET)
@@ -136,7 +139,7 @@ export const deleteUser = async (req, res, next) => {
 export const verifyUser = async (req, res, next) => {
   const { id, code } = req.query;
   try {
-    const result = await UserModel.verify(id, code);
+    const result = await verifyUserService(id, code);
 
     if (!result)
       throw createError(
@@ -166,6 +169,9 @@ export const loginUser = async (req, res, next) => {
 
     // Si ya existe un token en la cookie, no permitir login
     if (req.cookies?.token) {
+      //Equivalente a (req.cookies && req.cookies.token) Tiene que haber cookie y ademas token
+      //devuelve undefined si req.cookies no existe, sin error con el ? ----- es para que node no se rompa:  TypeError: Cannot read properties of undefined (reading 'token')
+
       return next(
         createError(
           400,
