@@ -7,10 +7,7 @@ import categoryRoutes from "./routes/category.routes.js";
 import productRoutes from "./routes/product.routes.js";
 import cartRoutes from "./routes/cart.routes.js";
 import orderRoutes from "./routes/order.routes.js";
-import addressRoutes from "./routes/address.routes.js"
-import passwordResetRoutes from "./routes/passwordReset.routes.js"
-
-
+import addressRoutes from "./routes/address.routes.js";
 
 dotenv.config();
 
@@ -38,13 +35,6 @@ app.use("/api", productRoutes);
 app.use("/api", cartRoutes);
 app.use("/api", orderRoutes);
 app.use("/api", addressRoutes);
-app.use("/api", passwordResetRoutes);
-
-
-
-
-
-
 
 // MIDDLEWARE PARA CONTROLAR RUTAS NO ENCONTRADAS -> 404. SIEMPRE AL FINAL.
 app.use((req, res, next) => {

@@ -40,8 +40,7 @@ export const AddressModel = {
     }
   },
 
-  async search(searchParams) {
-    ////Para probar ahora ya no busca uno sino que trae direcciones filtradas. Elimine findOne.
+  async search(searchParams) { //Filtra tambien por idUsuario.
     try {
       if (!searchParams || Object.keys(searchParams).length === 0) {
         throw createError(

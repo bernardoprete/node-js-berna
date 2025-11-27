@@ -56,3 +56,20 @@ export const tryAuth = async (req, res, next) => {
     next();
   }
 };
+
+export const noAuthRequired = async (req, res, next) => {
+  // PARA REALIZAR ACCIONES TENGO QUE ESTAR SI O SI LOGUEADO Y MANTENERME LOGUEADO O EN SESION
+  // extraer el token de la cookie. * Para poder acceder a una cookie necesito parsear.
+  const { token } = req.cookies;
+  console.log(token);
+
+  if (token) {
+    const err = new Error();
+
+    err.status = 401;
+    err.message = "Para realizar esta accion el usuario no debe esta logueado.";
+    next(err);
+  }
+
+  next();
+};

@@ -2,24 +2,22 @@ import { pool } from "../db.js";
 import { createError } from "../utils/utils.js";
 
 /* 
-Order model va ser el modelo que trabaja y hace las consultas a la tabla PEDIDO de nuestra BD - 
-Esta tabla maneja muchos datos de cada compra que se realiza - (A TRAVES DEL ID DE USUARIO PARA SABER A QUIÉN PERTENECE EL PEDIDO) 
-(cada pedido) pero lo más importante a saber es que no maneja el DETALLE DE LOS PRODUCTOS que tiene cada pedido, 
-eso lo maneja otra tabla.
+Order model va ser el modelo que trabaja y hace las consultas a la tabla PEDIDO de nuestra BD.
+Esta tabla maneja muchos datos de cada compra que se realiza - (A TRAVÉS DEL ID DE USUARIO PARA SABER A QUIÉN PERTENECE EL PEDIDO) 
+(cada pedido) pero lo más importante a saber es que NO maneja el DETALLE DE LOS PRODUCTOS que tiene cada pedido, 
+eso lo maneja otra tabla (detallepedido). 
 */
 
 export const OrderModel = {
   // Definimos una propiedad para contener/acceder al nombre de la tabla correspondiente a este modelo
   tablename: "pedido",
+
   // Definimos los nombre de los campos de esa tabla en un objeto.
   fields: {
     id: "idPedido",
     fecha_pedido: "fecha_pedido",
     estado: "estado",
     metodo_pago: "metodo_pago",
-    fecha_entrega: "fecha_entrega",
-    fecha_envio: "fecha_envio",
-    costo_envio: "costo_envio",
     subtotal: "subtotal",
     impuestos: "impuestos",
     descuentos: "descuentos",
@@ -30,90 +28,71 @@ export const OrderModel = {
     estado_pago: "estado_pago",
   },
 
+  /* 
+  Trae todos los pedidos de la tabla. 
+  (Útil para debug o visualizar todos los pedidos, pero no es el método principal.)
+  */
   async findAll() {
-    /* 
-    Reutilizamos este método adaptándolo a la tabla pedido para traer todos los pedidos (útil para debug o admin). 
-    Pero no es tan importante. 
-    */
     try {
       const [rows] = await pool.execute(`SELECT * FROM ${this.tablename}`);
-      // El pool.execute devuelve un array con arrays adentro, uno que tiene las filas,
-      // el resultado de la consulta y el otro los metadatos (que no se usan casi nunca),
-      // entonces al hacer: [rows] -  hacemos DESESTRUCTURACIÓN DE ARRAYS y al poner solo una variable
-      // (en este caso rows) lo que decimos es que nos muestre el primer array de esos 2,
-      // es decir el de primer índice.
       return rows;
-      // Aquí solo devolvemos rows (sin corchete) ya que el corchete lo hacíamos para hacer la desestructuración
-      // y aquí solo mostramos el resultado.
     } catch (error) {
       throw error;
     }
   },
 
+  /* 
+  Trae un pedido puntual por su ID (idPedido). 
+  Este sí es un método importante.
+  */
   async findByID(id) {
-    /* 
-    Trae un pedido puntual por su ID (idPedido). 
-    Digamos que este método SÍ es importante. 
-    */
     try {
       const [rows] = await pool.execute(
         `SELECT * FROM ${this.tablename} WHERE ${this.fields.id} = ?`,
         [id]
       );
       return rows[0];
-      // Aquí devolvemos por convención rows[0] porque si o si la consulta nos dará como respuesta un único elemento,
-      // pese a eso por convención va ese primer índice.
     } catch (error) {
-      console.log("Error al obtener el carrito solicitado", error);
+      console.log("Error al obtener el pedido solicitado", error);
       throw error;
     }
   },
 
+  /* 
+  Busca un pedido por un criterio dinámico, por ejm: { idUsuario: 4 }
+  Si encuentra un registro lo devuelve.
+  */
   async findOne(searchParams) {
-    /* 
-    Busca por campos dinámicos, por ejemplo { idUsuario: 4 } 
-    Por ende lo más básico es buscar por IdUsuario. 
-    Pero devuelve un solo registro, esa es la diferencia.
-    */
     try {
       if (!searchParams || Object.keys(searchParams).length === 0)
-        // Si no existen parámetros de búsqueda:
         throw createError(
           400,
           "No se han proporcionado parámetros de búsqueda."
         );
 
       const fields = Object.keys(searchParams);
-      // Object.keys devuelve un array con los nombres de las claves del objeto que le pasemos por parámetro,
-      // en este caso los parámetros de búsqueda.
       const values = Object.values(searchParams);
-      // Object.values devuelve un array con los valores asociados a las claves del objeto que le pasemos por parámetro.
+
       const conditions = fields.map((field) => `${field} = ?`).join(" AND ");
-      // Del array con los nombres de las claves del obj que le damos por parámetros,
-      // hacemos una recorrida y devolvemos un nuevo array modificado con el nombre y el ?,
-      // ejm: ["slug = ?", "visible = ?"]
 
       const sql = `SELECT * FROM ${this.tablename} WHERE ${conditions}`;
-      // Aquí hacemos la consulta insertando ese array de conditions.
       const [rows] = await pool.execute(sql, values);
-      // Aquí insertamos el array de valores donde cada índice se corresponde con cada índice de las condiciones.
       return rows[0];
-      // Retornamos un único valor, por convención.
     } catch (error) {
       throw error;
     }
   },
 
-  // MODELO PARA CREAR UN PEDIDO
+  /* 
+  MODELO PARA CREAR UN PEDIDO:
+  Ahora SOLO inserta los campos que pertenecen realmente a la tabla pedido.
+  Los datos del ENVÍO se crean después en la tabla pedido_envio, desde el SERVICE.
+  */
   async create(
     {
-      // Desestructuración del objeto...
       fecha_pedido,
       estado = "pendiente",
       metodo_pago,
-      fecha_entrega,
-      fecha_envio,
-      costo_envio = 0,
       subtotal,
       impuestos = 0,
       descuentos = 0,
@@ -121,24 +100,24 @@ export const OrderModel = {
       observaciones = null,
       idUsuario,
       idDireccion,
-      estado_pago
+      estado_pago,
     },
     connection
   ) {
     try {
+      // Array de columnas excepto el ID autoincremental
       const columns = Object.values(this.fields).filter(
-        (field) => field != this.fields.id
+        (field) => field !== this.fields.id
       );
-      // Esto es un array de campos que se pasan por parámetro y son las columnas que se van a agregar en la consulta a la BD.
 
+      // Generamos los placeholders (?, ?, ?, ...)
       const placeholders = columns.map(() => "?").join(", ");
+
+      // Orden de los valores exactamente según el orden de las columnas
       const values = [
         fecha_pedido,
         estado,
         metodo_pago,
-        fecha_entrega,
-        fecha_envio,
-        costo_envio,
         subtotal,
         impuestos,
         descuentos,
@@ -146,20 +125,15 @@ export const OrderModel = {
         observaciones,
         idUsuario,
         idDireccion,
-        estado_pago
+        estado_pago,
       ];
 
       const sql = `INSERT INTO ${this.tablename} (${columns.join(
         ", "
       )}) VALUES (${placeholders})`;
-      console.log("VALUES", values);
 
-      //
       const [result] = await connection.execute(sql, values);
-
-      // Retornamos el ID que es autoincremental generado por la BD.
       const orderId = result.insertId;
-      console.log("ORDER ID ", orderId);
 
       const [rows] = await connection.execute(
         `SELECT * FROM ${this.tablename} WHERE ${this.fields.id} = ?`,
@@ -173,8 +147,10 @@ export const OrderModel = {
     }
   },
 
-  //METODO QUE TRAE TODOS LOS PEDIDOS DE UN USUARIO ESPECIFICO  (POR SU ID USUARIO) CON POSIBLE FILTRO Y ORDENAMIENTO, A LA VEZ EL RESULTADO ESTA PAGINADO , ESTOS PEDIDOS SIN PRODS AGREGADOS.
-
+  /* 
+  MÉTODO QUE TRAE TODOS LOS PEDIDOS DE UN CLIENTE ESPECÍFICO (POR SU ID USUARIO)
+  Incluye JOINS a productos, categorías, direcciones y AHORA envío.
+  */
   async findAllClientOrders(
     finalParams,
     whereClause,
@@ -182,24 +158,25 @@ export const OrderModel = {
     orderColumns
   ) {
     try {
-      const finalQuery = `SELECT DISTINCT
-    ${orderColumns}
-    FROM pedido AS pe
-    INNER JOIN detallepedido AS dp ON dp.idPedido = pe.idPedido
-    INNER JOIN producto as prod ON prod.idProducto = dp.idProducto
-    INNER JOIN categoria as c ON c.idCategoria = prod.idCategoria
-    INNER JOIN direcciones AS d ON d.idDireccion = pe.idDireccion
+      const finalQuery = `
+      SELECT DISTINCT
+        ${orderColumns}
 
+      FROM pedido AS pe
+      INNER JOIN detallepedido AS dp ON dp.idPedido = pe.idPedido
+      INNER JOIN producto AS prod ON prod.idProducto = dp.idProducto
+      INNER JOIN categoria AS c ON c.idCategoria = prod.idCategoria
+      INNER JOIN direcciones AS d ON d.idDireccion = pe.idDireccion
 
-    ${whereClause}
-    ${orderClause}
-    LIMIT ? OFFSET ?`;
+      -- Integración del envío (LEFT JOIN por si el pedido aún no tiene registro en pedido_envio)
+      LEFT JOIN pedido_envio AS peenv ON peenv.idPedido = pe.idPedido
 
-      console.log(finalQuery);
+      ${whereClause}
+      ${orderClause}
+      LIMIT ? OFFSET ?
+      `;
 
       const [orders] = await pool.execute(finalQuery, finalParams);
-      console.log("order", orders);
-
       return orders;
     } catch (error) {
       console.log("Error al obtener los pedidos del sistema:", error);
@@ -207,10 +184,9 @@ export const OrderModel = {
     }
   },
 
-  // ------------------------------------------------------------------METODOS PARA ADMINISTRADOR ----------------------------------------------------------
-
-  // METODO QUE TRAE TODOS LOS PEDIDOS DEL SISTEMA (ADMIN) (POR SU ID USUARIO) CON POSIBLE FILTRO Y ORDENAMIENTO, A LA VEZ EL RESULTADO ESTA PAGINADO , ESTOS PEDIDOS SIN PRODS AGREGADOS.
-
+  /* 
+  MÉTODO DEL ADMIN QUE LISTA TODOS LOS PEDIDOS CON INFO COMPLETA
+  */
   async findAllSystemOrders(
     finalParams,
     whereClause,
@@ -222,18 +198,20 @@ export const OrderModel = {
       SELECT DISTINCT
         ${orderColumns}
 
-    FROM pedido AS pe
-    INNER JOIN detallepedido AS dp ON dp.idPedido = pe.idPedido
-    INNER JOIN producto as prod ON prod.idProducto = dp.idProducto
-    INNER JOIN categoria as c ON c.idCategoria = prod.idCategoria
-    INNER JOIN direcciones AS d ON d.idDireccion = pe.idDireccion
-    INNER JOIN usuario AS u ON u.idUsuario = pe.idUsuario
-   
+      FROM pedido AS pe
+      INNER JOIN detallepedido AS dp ON dp.idPedido = pe.idPedido
+      INNER JOIN producto AS prod ON prod.idProducto = dp.idProducto
+      INNER JOIN categoria AS c ON c.idCategoria = prod.idCategoria
+      INNER JOIN direcciones AS d ON d.idDireccion = pe.idDireccion
+      INNER JOIN usuario AS u ON u.idUsuario = pe.idUsuario
+
+      -- JOIN DE ENVÍO
+      LEFT JOIN pedido_envio AS peenv ON peenv.idPedido = pe.idPedido
+
       ${whereClause}
       ${orderClause}
-
       LIMIT ? OFFSET ?
-    `;
+      `;
       const [rows] = await pool.execute(sql, finalParams);
       return rows;
     } catch (error) {
@@ -242,13 +220,11 @@ export const OrderModel = {
     }
   },
 
-  // METODO QUE TRAE UN PEDIDO POR SU ID (idPedido) CON INFO DEL USUARIO Y DIRECCION DE ENVIO
-  // Este método está pensado para el panel del ADMINISTRADOR. A diferencia del método findByID tradicional,
-  // este combina información de tres tablas: pedido, usuarios y direcciones.
-  // De esta manera podemos ver en un solo resultado: los datos del pedido, del comprador y su direccion asociada.
+  /* 
+  METODO PARA TRAER UN PEDIDO POR ID CON INFO DEL USUARIO, DIRECCIÓN Y AHORA DATOS DE ENVÍO.
+  */
   async findByIdOrder(idPedido) {
     try {
-      //
       const sql = `
       SELECT 
         p.${this.fields.id} AS idPedido,
@@ -259,51 +235,68 @@ export const OrderModel = {
         p.${this.fields.subtotal},
         p.${this.fields.idUsuario},
         p.${this.fields.idDireccion},
+
+        -- datos del usuario
         u.nombre AS nombreUsuario,
         u.apellido AS apellidoUsuario,
         u.email AS emailUsuario,
+
+        -- direccion
         d.direccionLinea1,
         d.direccionLinea2,
         d.ciudad,
         d.provincia,
-        d.codigoPostal
+        d.codigoPostal,
+
+        -- datos del envío
+        peenv.fecha_envio AS envio_fecha_envio,
+        peenv.fecha_entrega AS envio_fecha_entrega,
+        peenv.costo_envio AS envio_costo_envio,
+        peenv.estado_envio AS envio_estado_envio,
+        peenv.codigo_seguimiento AS envio_codigo_seguimiento,
+        peenv.metodo_envio AS envio_metodo_envio
+
       FROM ${this.tablename} AS p
       INNER JOIN usuario AS u ON p.${this.fields.idUsuario} = u.idUsuario
       LEFT JOIN direcciones AS d ON p.${this.fields.idDireccion} = d.idDireccion
+
+      -- JOIN ENVÍO
+      LEFT JOIN pedido_envio AS peenv ON peenv.idPedido = p.idPedido
+
       WHERE p.${this.fields.id} = ?
       `;
 
-      // Ejecutamos la consulta
       const [rows] = await pool.execute(sql, [idPedido]);
 
-      // Si no hay resultados  devolvemos null
       if (rows.length === 0) return null;
-
-      // Retornamos el primeR Y UNICO resultado
       return rows[0];
     } catch (error) {
       console.log(
-        "Error al obtener el pedido con datos del usuario y dirección:",
+        "Error al obtener el pedido con datos del usuario, dirección y envío:",
         error
       );
       throw error;
     }
   },
 
-  //--------------------------------------------------------------------------METODOS DE  PAGINACION --------------------------------
-
-  //PAGINATION DATA -  Este método hace solo la parte del conteo total (el “COUNT” de ordenes). Es decir “Dame solo el total de ordenes que cumplen este filtro”.Sirve cuando querés separar la obtención de ordenes del conteo total,por ejemplo si vas a combinar datos de varias tablas o hacer paginación más avanzada.
-  //PAGINATION DATA - DE LAS ORDENES
+  /* 
+  MÉTODO DE PAGINACIÓN QUE HACE SOLO EL COUNT TOTAL DE PEDIDOS.
+  */
   async paginationData(whereClause, queryParams) {
     try {
       const [resultTotal] = await pool.execute(
-        `SELECT COUNT(DISTINCT pe.${this.fields.id}) as count
-        FROM ${this.tablename} as pe
+        `
+        SELECT COUNT(DISTINCT pe.${this.fields.id}) as count
+        FROM ${this.tablename} AS pe
         INNER JOIN detallepedido AS dp ON dp.idPedido = pe.idPedido
-        INNER JOIN producto as prod ON prod.idProducto = dp.idProducto
-        INNER JOIN categoria as c ON c.idCategoria = prod.idCategoria
+        INNER JOIN producto AS prod ON prod.idProducto = dp.idProducto
+        INNER JOIN categoria AS c ON c.idCategoria = prod.idCategoria
         INNER JOIN direcciones AS d ON d.idDireccion = pe.idDireccion
         INNER JOIN usuario AS u ON u.idUsuario = pe.idUsuario
+        
+        -- envío incluido opcionalmente
+        LEFT JOIN pedido_envio AS peenv ON peenv.idPedido = pe.idPedido
+
         ${whereClause}
         `,
         queryParams

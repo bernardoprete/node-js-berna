@@ -17,7 +17,7 @@ export const getAdrress = async (req, res, next) => {
     next(error);
   }
 };
-//Ver marca por id.
+//Ver direccion por id.
 export const getAddressById = async (req, res, next) => {
   const { id } = req.params;
   try {
@@ -36,7 +36,7 @@ export const getAddressById = async (req, res, next) => {
   }
 };
 export const getAddressByField = async (req, res, next) => {
-  //Para probar ahora ya no busca uno sino que trae direcciones filtradas. Elimine findOne.
+  // Busca direcciones por diferentes campos. (usa query params)
   try {
     const results = await AddressModel.search(req.query);
 

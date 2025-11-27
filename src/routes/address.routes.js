@@ -19,10 +19,12 @@ const router = Router();
 // Listar todas las direcciones
 router.get("/address", [authRequired], getAdrress);
 
+//Falta una ruta donde pueda ver todas las direcciones del sistema (solo para admin) - paginadas y con filtro. --Preguntar si es necesario hacerla.
+
 // Buscar por ID
 router.get("/address/id/:id", [authRequired, adminRequired], getAddressById);
 
-// Buscar por field
+// Buscar por field -- quizas sea mejor que este metodo busque todas las direcciones de un usuario determinado.
 router.get("/address/search", [authRequired, adminRequired], getAddressByField);
 
 // Crear direccion

@@ -2,8 +2,8 @@ import { hashString } from "../utils/utils.js";
 import crypto from "crypto";
 import { sendEmailService } from "./email.service.js";
 import { UserModel } from "../models/users.model.js";
-import { createError } from "../utils/utils.js";
 import { pool } from "../db.js";
+import { createError } from "../utils/utils.js";
 import bcrypt from "bcryptjs";
 
 export const createUserService = async ({
@@ -114,7 +114,7 @@ export const verifyUserService = async (idUsuario, code) => {
   try {
     await sendEmailService(
       user.email,
-      "✔ Cuenta verificada con éxito",
+      " Cuenta verificada con éxito",
       emailContent
     );
   } catch (err) {
@@ -122,4 +122,114 @@ export const verifyUserService = async (idUsuario, code) => {
   }
 
   return { message: "Cuenta verificada con éxito." };
+};
+
+/* 
+  // CAMBIO DE PASSWORD POR PARTE DE LOS USUARIOS
+  */
+
+export const requestPasswordReset = async (email) => {
+  //Solicitar codigo de recuperacion de password.
+  const user = await UserModel.findOne({ email }); //Buscar user por mail.
+
+  if (!user) throw createError(404, "El email no pertenece a ningun usuario.");
+
+  const code = Math.floor(100000 + Math.random() * 900000); //Creamos codigo aleatorio de 6 digitos.
+  const expires = new Date(Date.now() + 3 * 60 * 1000); //Dura 3 min.
+
+  //Guardamos en la BD.
+  await UserModel.createResetRequest(user.idUsuario, code, expires);
+
+  // Enviar mail usando el template base
+  await sendEmailService(user.email, "Código de recuperación de contraseña", {
+    title: "Recuperación de contraseña",
+    message: `Tu código es: <strong>${code}</strong>.`,
+    link: null, // Puedo ponerlo null ya que no requiero de ningun link.
+  });
+  return { message: "Código de recuperación enviado al correo." };
+};
+
+// RESETEAR PASSWORD
+// Este metodo "recibe" lo que el user manda en el body (si el mail esta ok, si el codigo es el correcto y si la password esta ok.)
+export const resetPassword = async (
+  email,
+  code,
+  newPassword,
+  newPasswordConfirm
+) => {
+  const user = await UserModel.findOne({ email }); //Verificamos si el email es correcto.
+  if (!user) throw createError(404, "El email no pertenece a ningun usuario.");
+
+  const validReset = await UserModel.getValidCode(
+    //Verificamos si el codigo es valido o si expiro.
+    user.idUsuario,
+    code
+  );
+  if (!validReset)
+    throw createError(400, "El codigo es invalido o ha expirado.");
+
+  //Si todo esta bien, hasheamos la nuevaPassword.
+  const hashed = await bcrypt.hash(newPassword, 10);
+
+  //Actualizar el password en la BD.
+  await UserModel.updatePartial(user.idUsuario, { password: hashed });
+
+  //Marcar el codigo como usado
+  await UserModel.markAsUsed(validReset.id);
+
+  //Enviarle mail al user para confirmar que fue actualizada la password.
+  await sendEmailService(user.email, "Tu contraseña ha sido actualizada", {
+    title: "Contraseña actualizada",
+    message:
+      "Tu contraseña fue cambiada correctamente. Si no fuiste vos, por favor contacta al soporte inmediatamente.",
+    link: null,
+  });
+
+  return { message: "Contraseña actualizada correctamente." };
+};
+
+//CAMBIAR PASSWORD (ESTANDO LOGUEADO)
+
+export const changePasswordLoggedService = async (
+  idUsuario,
+  currentPassword,
+  newPassword
+) => {
+  // Buscar usuario
+  const user = await UserModel.findOne({ idUsuario });
+  if (!user) throw createError(404, "Usuario no encontrado.");
+
+  // Comparar contraseña actual
+  const passwordMatch = await bcrypt.compare(currentPassword, user.password);
+  if (!passwordMatch) {
+    throw createError(400, "La contraseña actual es incorrecta.");
+  }
+
+  //Evitar que la nueva contraseña sea igual a la actual
+  const isSameAsOld = await bcrypt.compare(newPassword, user.password);
+  if (isSameAsOld) {
+    throw createError(
+      400,
+      "La nueva contraseña no puede ser igual a la contraseña actual."
+    );
+  }
+
+  // Hashear nueva contraseña
+  const hashed = await bcrypt.hash(newPassword, 10);
+
+  // Actualizar en BD
+  await UserModel.updatePartial(idUsuario, { password: hashed });
+
+  // Enviar email de aviso
+  await sendEmailService(user.email, "Tu contraseña ha sido actualizada", {
+    title: "Contraseña actualizada",
+    message:
+      "Tu contraseña fue cambiada correctamente. Si no fuiste vos, por favor contacta al soporte inmediatamente.",
+    link: null,
+  });
+
+  //Devolver mensaje
+  return {
+    message: "Contraseña cambiada con exito. Vuelve a iniciar sesion.",
+  };
 };

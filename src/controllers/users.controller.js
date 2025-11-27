@@ -2,10 +2,15 @@ import { pool } from "../db.js"; // Vamos a utilizar el pool de conexiones
 import { crearTokenDeAcceso } from "../libs/jwt.js";
 import { UserModel } from "../models/users.model.js";
 import {
+  changePasswordLoggedService,
   createUserService,
   verifyUserService,
 } from "../services/user.services.js";
 import { compareStringHash, createError } from "../utils/utils.js";
+import {
+  requestPasswordReset,
+  resetPassword,
+} from "../services/user.services.js";
 
 // CONSULTA DEL MODELO DE USUARIOS  - VER TODOS LOS USUARIOS (GET)
 export const getUsers = async (req, res, next) => {
@@ -167,19 +172,6 @@ export const loginUser = async (req, res, next) => {
 
     //Antes de loguear un usuario debo asegurarme que otro usuario no este logueado.
 
-    // Si ya existe un token en la cookie, no permitir login
-    if (req.cookies?.token) {
-      //Equivalente a (req.cookies && req.cookies.token) Tiene que haber cookie y ademas token
-      //devuelve undefined si req.cookies no existe, sin error con el ? ----- es para que node no se rompa:  TypeError: Cannot read properties of undefined (reading 'token')
-
-      return next(
-        createError(
-          400,
-          "Ya hay una sesion activa. Cierre sesion para continuar."
-        )
-      );
-    }
-
     // Primer paso: Validar los datos del usuario
     if (!user) throw createError(400, "El email ingresado es incorrecto");
     if (!user.emailVerificado)
@@ -226,4 +218,83 @@ export const loginUser = async (req, res, next) => {
 export const logOut = async (req, res) => {
   res.clearCookie("token");
   res.sendStatus(204);
+};
+
+/* 
+  // CAMBIO DE PASSWORD POR PARTE DE LOS USUARIOS
+  */
+
+// Enviar codigo de recuperacion al email
+
+export const forgotPassword = async (req, res, next) => {
+  try {
+    // Si el usuario esta logueado NO debe usar este endpoint.
+    if (req.user) {
+      throw createError(
+        403,
+        "Ya estás logueado. Para cambiar tu contraseña ve a tu perfil."
+      );
+    }
+
+    const { email } = req.body;
+
+    const result = await requestPasswordReset(email);
+
+    res.status(200).json(result);
+  } catch (err) {
+    if (err.status) return next(err);
+    next(createError(500, "Error al solicitar el codigo de recuperacion."));
+  }
+};
+
+//Resetear contraseña con código
+
+export const resetPasswordController = async (req, res, next) => {
+  try {
+    if (req.user) {
+      // Si el usuario esta logueado NO debe usar este endpoint (por eso usamos el tryAuth, ya que deja req.user con data o null, si existe es que esta logueado)
+      throw createError(
+        403,
+        "Ya estás logueado. Para cambiar tu contraseña ve a tu perfil."
+      );
+    }
+
+    const { email, code, newPassword, newPasswordConfirm } = req.body;
+
+    const result = await resetPassword(
+      email,
+      code,
+      newPassword,
+      newPasswordConfirm
+    );
+
+    res.status(200).json(result);
+  } catch (err) {
+    if (err.status) return next(err);
+    next(createError(500, "Error al intentar restablecer la contraseña."));
+  }
+};
+
+//CAMBIAR PASSWORD (ESTANDO LOGUEADO)
+
+// CONTROLADOR: Cambiar contraseña estando logueado
+export const changePasswordLogged = async (req, res, next) => {
+  try {
+    const idUsuario = req.user.idUsuario; // viene del token
+    const { currentPassword, newPassword } = req.body;
+
+    const result = await changePasswordLoggedService(
+      idUsuario,
+      currentPassword,
+      newPassword
+    );
+
+    // Cerrar sesion despues del cambio
+    res.clearCookie("token");
+
+    res.status(200).json(result);
+  } catch (err) {
+    if (err.status) return next(err);
+    next(createError(500, "Error al cambiar la contraseña."));
+  }
 };

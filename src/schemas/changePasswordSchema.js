@@ -29,7 +29,7 @@ export const changePasswordSchema = z
       .min(6, { message: "La confirmación debe tener al menos 6 caracteres." }),
   })
   //Validación Zod extra para que newPassword == newPasswordConfirm
-  .refine((data) => data.newPassword === data.newPasswordConfirm, {
+  .refine((data) => data.newPassword === data.newPasswordConfirm, { // pasa la validacion si da true, sino te da el mensaje de error.
     message: "Las nuevas contraseñas no coinciden.",
     path: ["newPasswordConfirm"],
   });
