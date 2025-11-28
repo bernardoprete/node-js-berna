@@ -7,6 +7,7 @@ import {
   getAddressByField,
   updateAddress,
   deleteAddress,
+  getAllSystemAddresses,
 } from "../controllers/address.controller.js";
 import {
   createAddressSchema,
@@ -20,6 +21,11 @@ const router = Router();
 router.get("/address", [authRequired], getAdrress);
 
 //Falta una ruta donde pueda ver todas las direcciones del sistema (solo para admin) - paginadas y con filtro. --Preguntar si es necesario hacerla.
+router.get(
+  "/address/system",
+  [authRequired, adminRequired],
+  getAllSystemAddresses
+);
 
 // Buscar por ID
 router.get("/address/id/:id", [authRequired, adminRequired], getAddressById);
@@ -45,5 +51,8 @@ router.put(
 
 // Eliminar direccion
 router.delete("/address/:id", authRequired, deleteAddress);
+
+
+
 
 export default router;

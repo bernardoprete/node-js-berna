@@ -1,5 +1,6 @@
 import { createError } from "../utils/utils.js";
 import { AddressModel } from "../models/address.model.js";
+import { getAllSystemAddressesService } from "../services/address.service.js";
 
 // Obtener/listar direcciones de user logueado
 export const getAdrress = async (req, res, next) => {
@@ -145,3 +146,52 @@ export const deleteAddress = async (req, res, next) => {
     next(createError(500, "Error interno al eliminar la direccion."));
   }
 };
+
+/* 
+  CONTROLADOR PARA OBTENER TODAS LAS DIRECCIONES DEL SISTEMA (ADMIN)
+  Paginado, con filtros dinámicos y ordenamiento.
+  Similar al controlador de órdenes del sistema.
+*/
+
+export const getAllSystemAddresses = async (req, res, next) => {
+  const page =
+    parseInt(req.query.page) && req.query.page >= 1
+      ? parseInt(req.query.page)
+      : 1;
+  const limit =
+    parseInt(req.query.limit) && req.query.limit >= 1
+      ? parseInt(req.query.limit)
+      : 5;
+  const offset = (page - 1) * limit;
+
+  // Posibles filtros para buscar direcciones
+  const filters = {
+    usuario: req.query.usuario || null, // nombre, apellido o email
+    ciudad: req.query.ciudad || null,
+    provincia: req.query.provincia || null,
+    codigoPostal: req.query.codigoPostal || null,
+    pais: req.query.pais || null,
+    sortBy: req.query.sort_by || "idDireccion",
+    sortDirection: req.query.sort_direction || "asc",
+  };
+
+  const cleanFilters = Object.fromEntries(
+    Object.entries(filters).filter(([_, value]) => value)
+  );
+
+  try {
+    const result = await getAllSystemAddressesService(
+      page,
+      limit,
+      offset,
+      cleanFilters
+    );
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.log(error);
+    if (error.status) return next(error);
+    next(createError(500, "Error interno al obtener direcciones del sistema."));
+  }
+};
+

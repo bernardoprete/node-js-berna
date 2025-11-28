@@ -40,7 +40,8 @@ export const AddressModel = {
     }
   },
 
-  async search(searchParams) { //Filtra tambien por idUsuario.
+  async search(searchParams) {
+    //Filtra tambien por idUsuario.
     try {
       if (!searchParams || Object.keys(searchParams).length === 0) {
         throw createError(
@@ -167,13 +168,54 @@ export const AddressModel = {
   },
 
   async findByUserId(idUsuario) {
-  try {
-    const sql = `SELECT * FROM ${this.tablename} WHERE ${this.fields.idUsuario} = ?`;
-    const [rows] = await pool.execute(sql, [idUsuario]);
-    return rows;
-  } catch (error) {
-    throw error;
-  }
-}
+    try {
+      const sql = `SELECT * FROM ${this.tablename} WHERE ${this.fields.idUsuario} = ?`;
+      const [rows] = await pool.execute(sql, [idUsuario]);
+      return rows;
+    } catch (error) {
+      throw error;
+    }
+  },
 
+  // MÉTODO ADMIN - LISTAR TODAS LAS DIRECCIONES DEL SISTEMA (PAGINADAS)
+  async findAllSystemAddresses(
+    finalParams,
+    whereClause,
+    orderClause,
+    addressColumns
+  ) {
+    try {
+      const sql = `
+        SELECT ${addressColumns}
+        FROM direcciones AS d
+        INNER JOIN usuario AS u ON u.idUsuario = d.idUsuario
+        ${whereClause}
+        ${orderClause}
+        LIMIT ? OFFSET ?
+      `;
+
+      const [rows] = await pool.execute(sql, finalParams);
+      return rows;
+    } catch (error) {
+      console.log(error);
+      throw createError(500, "Error al listar direcciones del sistema.");
+    }
+  },
+
+  // MÉTODO ADMIN - PAGINACIÓN TOTAL
+  async paginationSystemAddresses(whereClause, queryParams) {
+    try {
+      const sql = `
+        SELECT COUNT(*) AS count
+        FROM direcciones AS d
+        INNER JOIN usuario AS u ON u.idUsuario = d.idUsuario
+        ${whereClause}
+      `;
+
+      const [rows] = await pool.execute(sql, queryParams);
+      return rows[0].count;
+    } catch (error) {
+      throw error;
+    }
+  },
 };
