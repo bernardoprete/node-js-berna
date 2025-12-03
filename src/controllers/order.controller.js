@@ -175,20 +175,21 @@ export const getOrderDetailsAdmin = async (req, res, next) => {
 
 // 1- ESTADO: PENDIENTE -- Es diferente al metodo createInitial (Este cambia el estado y el otro inicial la orden de manera predeterminada.)
 export const orderPending = async (req, res, next) => {
-  const { id } = req.params; //idPedido
+  const { id } = req.params; // ID del pedido a actualizar
 
   try {
-    // Llamamos al service que se encarga de actualizar el estado
-    const result = await orderService.setPending(id);
+    const result = await orderPendingService(id); // Llamamos al service
 
-    // Respondemos al cliente
-    res.status(200).json(result);
+    res.status(200).json({
+      message: "El pedido fue marcado como pendiente.",
+      result,
+    });
   } catch (error) {
     if (error.status) return next(error);
     next(
       createError(
         500,
-        "Error interno al intentar cambiar el estado a Pendiente."
+        "Error interno al intentar cambiar el estado a pendiente."
       )
     );
   }
@@ -196,17 +197,21 @@ export const orderPending = async (req, res, next) => {
 
 // 2- ESTADO: PROCESADO - Se confirma el pago y se procede a preparar el pedido.
 export const orderProcessed = async (req, res, next) => {
-  const { id } = req.params;
+  const { id } = req.params; // ID del pedido a actualizar
 
   try {
-    const result = await orderService.setProcessedService(id); //Falta hacerlo
-    res.status(200).json(result);
+    const result = await orderProcessedService(id); // Llamamos al service
+
+    res.status(200).json({
+      message: "El pedido fue marcado como procesado.",
+      result,
+    });
   } catch (error) {
     if (error.status) return next(error);
     next(
       createError(
         500,
-        "Error interno al intentar cambiar el estado a Procesado."
+        "Error interno al intentar cambiar el estado a procesado."
       )
     );
   }
@@ -214,12 +219,27 @@ export const orderProcessed = async (req, res, next) => {
 
 // 3- ESTADO: ENVIADO (SHIPPED) - Cuando el pedido es enviado a la dirección del cliente.
 // Aquí además recibimos el código de seguimiento
-export const orderShippedService = async (req, res, next) => {
-  const { id } = req.params;
-  const { codigoSeguimiento } = req.body;
-
+export const orderShipped = async (req, res, next) => {
+  const { id } = req.params; //idPedido
+  const {
+    codigo_seguimiento,
+    fecha_envio,
+    fecha_entrega,
+    costo_envio,
+    estado_envio,
+    metodo_envio,
+  } = req.body;
+  const shipData = {
+    //Necesitamos todos estos datos cuando pasamos el pedido a enviado. Aqui agrupa los datos en un objeto para pasar esto por parametro al servicio mas limpio.
+    codigo_seguimiento,
+    fecha_envio,
+    fecha_entrega,
+    costo_envio,
+    estado_envio,
+    metodo_envio,
+  };
   try {
-    const result = await orderService.setShippedService(id, codigoSeguimiento); //Falta hacerlo
+    const result = await orderShippedService(id, shipData);
     res.status(200).json(result);
   } catch (error) {
     if (error.status) return next(error);
@@ -231,17 +251,30 @@ export const orderShippedService = async (req, res, next) => {
 
 // 4- ESTADO: ENTREGADO - Cuando el envío llega a destino. Se setea la fecha de entrega
 export const orderDelivered = async (req, res, next) => {
-  const { id } = req.params;
+  const { id } = req.params; // IdPedido
+
+  //Esta info posteriormente va a venir de la api. No es seguro que esta info este en el body. 
+  const { fecha_entrega, estado_envio } = req.body; 
+
+  // Para pasar mas limpia la data por parametro armamos un objeto.
+  const deliveredData = {
+    fecha_entrega,
+    estado_envio: estado_envio || "delivered", // Valor por defecto
+  };
 
   try {
-    const result = await orderService.setDeliveredService(id); //Falta hacerlo
-    res.status(200).json(result);
+    const result = await orderDeliveredService(id, deliveredData);
+
+    res.status(200).json({
+      message: "El pedido fue marcado como entregado.",
+      result,
+    });
   } catch (error) {
     if (error.status) return next(error);
     next(
       createError(
         500,
-        "Error interno al intentar marcar el pedido como Entregado."
+        "Error interno al intentar marcar el pedido como entregado."
       )
     );
   }
@@ -252,7 +285,7 @@ export const orderCancelled = async (req, res, next) => {
   const { id } = req.params;
 
   try {
-    const result = await orderService.setCancelledService(id); //Falta hacerlo
+    const result = await orderService.orderCancelledService(id); //Falta hacerlo
     res.status(200).json(result);
   } catch (error) {
     if (error.status) return next(error);

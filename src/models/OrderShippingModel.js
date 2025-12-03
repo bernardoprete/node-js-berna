@@ -24,25 +24,86 @@ export const OrderShippingModel = {
     estado_envio: "estado_envio",
   },
 
-  //  Este método se ejecuta AUTOMÁTICAMENTE cuando se crea un pedido. Como manejamos el costo de envio e impuestos?
-
-  async createInitial(idPedido, connection) {
+  async createOrderShippedData(
+    {
+      // Desestructuración del objeto...
+      fecha_entrega = null,
+      fecha_envio = null,
+      costo_envio = 0,
+      codigo_seguimiento = null,
+      metodo_envio = null,
+      estado_envio = "pendiente",
+      idPedido,
+    },
+    connection = pool
+  ) {
     try {
-      const sql = `
-        INSERT INTO ${this.tablename}
-        (idPedido, estado_envio, costo_envio)
-        VALUES (?, 'pendiente', 0)
-      `;
+      // EN EL MODELO HACERLO DE FORMA DINÁMICA:
 
-      await connection.execute(sql, [idPedido]);
+      const values = [
+        fecha_entrega,
+        fecha_envio,
+        costo_envio,
+        codigo_seguimiento,
+        metodo_envio,
+        estado_envio,
+        idPedido,
+      ];
 
-      return true;
+      const sql = `INSERT INTO pedido_envio (fecha_entrega,fecha_envio,costo_envio,codigo_seguimiento,metodo_envio,estado_envio,idPedido)
+       VALUES (?,?,?,?,?,?,?)`;
+
+      console.log("VALUES", values);
+
+      //
+      const [result] = await connection.execute(sql, values);
+
+      // Retornamos el ID que es autoincremental generado por la BD.
+      const orderShippedDataId = result.insertId;
+
+      const [rows] = await connection.execute(
+        `SELECT * FROM pedido_envio WHERE idEnvio = ?`,
+        [orderShippedDataId]
+      );
+
+      return rows[0];
     } catch (error) {
-      console.log("Error al crear el envío inicial del pedido:", error);
+      if (error.status) throw error;
+      console.log(error);
       throw createError(
         500,
-        "Error al intentar crear el registro inicial de envío."
+        "Error al intentar crear la información de envío del pedido."
       );
+    }
+  },
+
+  async updateOrderShippedData(id, updateData, connection = pool) {
+    try {
+      //conection o pool comun.
+      if (!updateData || Object.keys(updateData).length === 0) {
+        throw createError(
+          400,
+          "No se enviaron datos para actualizar el producto."
+        );
+      }
+
+      const fields = Object.keys(updateData); //Array de objetos
+      const values = Object.values(updateData);
+
+      const setData = fields.map((field) => `${field} = ?`).join(", ");
+      const sql = `UPDATE pedido_envio SET ${setData} WHERE idPedido = ?`;
+
+      const [result] = await connection.execute(sql, [...values, id]); //Copio array de objetos como primer parametro
+
+      if (result.affectedRows === 0) {
+        throw createError(404, "No se encontro la orden a actualizar.");
+      }
+
+      return result.affectedRows > 0; //True si modifico y false sino modifico.
+    } catch (error) {
+      if (error.status) throw error;
+      console.log(error);
+      throw createError(500, "Error al intentar actualizar el pedido");
     }
   },
 

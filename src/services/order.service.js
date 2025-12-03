@@ -96,9 +96,6 @@ export const createOrderService = async (
     );
     const idPedido = newOrder.idPedido; //Id del pedido creado. Importantee.
 
-    // Creamos inicialmente el estado del envio del pedido como "pendiente" con este metodo. Este metodo trabaja exclusivamente con el modelo de envio de pedidos y no posee un controlador.
-    await OrderShippingModel.createInitial(idPedido, connection);
-
     //Ahora los productos que teniamos en el carrito y que son parte de este nuevo pedido hay que agregarlos al detalle del pedido , pero para eso debemos crear el detalle del pedido (hacer un INSERT INTO en la tabla detallepedido) e ir copiando cada producto que tenemos en el carrito y agregarlo a esa tabla. MUY IMPORTANTE -
 
     //Recorremos el array que es la variable products (que tiene toda la info de los prodcutos del carrito) y cada prodcuto lo insertamos en la tabla detallepedido de la bd con el metodocreate que tenemos en orderProductsDetail. - IMPORTANTEE.
@@ -544,3 +541,9 @@ export const getAllOrdersSystemService = async (
     );
   }
 };
+
+/*
+
+  SERVICES PARA MANEJO DE ESTADO DE LAS ORDENES (pendiente, procesando, etc..)
+
+*/

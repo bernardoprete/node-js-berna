@@ -7,7 +7,7 @@ export const getAdrress = async (req, res, next) => {
   try {
     const idUsuario = req.user.idUsuario;
 
-    const result = await AddressModel.findByUserId(idUsuario); //Busca solo las direcciones del user logueado. Aqui no tenemos metodo para buscar tods las direcicones del sitema.
+    const result = await AddressModel.findByUserId(idUsuario); //Busca solo las direcciones del user logueado.
     res.status(200).json(result);
   } catch (err) {
     if (err.status) return next(err);
