@@ -5,6 +5,10 @@ import {
   findOrderDetailsAdminService,
   getAllClientOrdersService,
   getAllOrdersSystemService,
+  orderDeliveredService,
+  orderPendingService,
+  orderProcessedService,
+  orderShippedService,
 } from "../services/order.service.js";
 
 /* EL controlador puede conectarse a ambos modelos (orderModel y OrderProdcutDetailsModel) directamente pero tambien sepuede conectar por medio del cart.service - El controlador recibe la info ejecuta el metodo (ya sea que provenga de algun modelo o del servicio) y da respuesta. NO APLICA LOGICA  */
@@ -253,8 +257,8 @@ export const orderShipped = async (req, res, next) => {
 export const orderDelivered = async (req, res, next) => {
   const { id } = req.params; // IdPedido
 
-  //Esta info posteriormente va a venir de la api. No es seguro que esta info este en el body. 
-  const { fecha_entrega, estado_envio } = req.body; 
+  //Esta info posteriormente va a venir de la api. No es seguro que esta info este en el body.
+  const { fecha_entrega, estado_envio } = req.body;
 
   // Para pasar mas limpia la data por parametro armamos un objeto.
   const deliveredData = {
@@ -280,15 +284,15 @@ export const orderDelivered = async (req, res, next) => {
   }
 };
 
-// 5-ESTADO: CANCELADO
+/* // 5-ESTADO: CANCELADO
 export const orderCancelled = async (req, res, next) => {
   const { id } = req.params;
 
   try {
-    const result = await orderService.orderCancelledService(id); //Falta hacerlo
+    const result = await orderService.orderCancelledServic3(id); //Falta hacerlo
     res.status(200).json(result);
   } catch (error) {
     if (error.status) return next(error);
     next(createError(500, "Error interno al intentar cancelar el pedido."));
   }
-};
+}; */

@@ -7,6 +7,10 @@ import {
   getAllOrdersSystem,
   getOrderDetailsAdmin,
   getOrderDetailUser,
+  orderDelivered,
+  orderPending,
+  orderProcessed,
+  orderShipped,
 } from "../controllers/order.controller.js";
 import { validateSchema } from "../middlewares/validationSchemas.middleware.js";
 import { createOrderSchema } from "../schemas/orderSchema.js";
@@ -40,5 +44,30 @@ router.get(
   [adminRequired],
   getOrderDetailsAdmin
 ); // Obtenemos de un pedido particular (por su idPedido) y vemos el detalle solamente (productos.)  PODRIA PAGINARSE ETC (NO ESTA HECHO)
+
+//   RUTAS PARA GESTIÓN DE ESTADOS DEL PEDIDO
+
+// Cambiar estado a: pendiente
+router.put("/orders/:id/pending", [authRequired, adminRequired], orderPending);
+
+// Cambiar estado a: procesado
+router.put(
+  "/orders/:id/processed",
+  [authRequired, adminRequired],
+  orderProcessed
+);
+
+// Cambiar estado a: enviado (incluye info de tracking)
+router.put("/orders/:id/shipped", [authRequired, adminRequired], orderShipped);
+
+// Cambiar estado a: entregado
+router.put(
+  "/orders/:id/delivered",
+  [authRequired, adminRequired],
+  orderDelivered
+);
+
+// Cambiar estado a: cancelado (este lo vemos mañana en profundidad)
+//router.put("/orders/:id/cancelled", [authRequired, adminRequired], orderCancelled);
 
 export default router;

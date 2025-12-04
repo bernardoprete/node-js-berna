@@ -544,6 +544,318 @@ export const getAllOrdersSystemService = async (
 
 /*
 
-  SERVICES PARA MANEJO DE ESTADO DE LAS ORDENES (pendiente, procesando, etc..)
+  SERVICES PARA MANEJO DE ESTADO DE LAS ORDENES
 
 */
+// Orden pendiente
+export const orderPendingService = async (id) => {
+  //No es necesaria una transaccion ya que solo modificamos una tabla (pedido)
+  try {
+    // Buscamos el pedido
+    const order = await OrderModel.findByID(id);
+
+    if (!order) throw createError(400, "La orden no existe");
+
+    // Validar estados no permitidos
+    const invalidStates = ["cancelado", "entregado", "enviado"];
+    if (invalidStates.includes(order.estado.toLowerCase())) {
+      throw createError(
+        400,
+        `No puedes volver la orden al estado Pendiente desde el estado: ${order.estado}`
+      );
+    }
+
+    // Actualizar pedido a pendiente
+    await OrderModel.update(id, { estado: "pendiente" });
+
+    //  Devolvemos el pedido actualizado
+    const updatedOrder = await OrderModel.findByID(id);
+    return updatedOrder;
+  } catch (error) {
+    if (error.status) throw error;
+    console.error(error);
+    throw createError(500, "Error al intentar cambiar la orden a Pendiente.");
+  }
+};
+// Orden procesada
+export const orderProcessedService = async (id) => {
+  //No necesitamos transaccion
+  try {
+    // 1. Buscar la orden
+    const order = await OrderModel.findByID(id);
+    if (!order) throw createError(404, "La orden solicitada no fue encontrada");
+
+    // 2. Validar estados que NO permiten ser procesados
+    const invalidStates = ["cancelado", "enviado", "entregado"];
+    if (invalidStates.includes(order.estado.toLowerCase())) {
+      throw createError(
+        400,
+        `No se puede procesar una orden que está en estado: ${order.estado}`
+      );
+    }
+
+    // 3. Actualizar estado a "procesando"
+    await OrderModel.update(id, { estado: "procesando" });
+
+    // 4. Obtener la orden ya actualizada
+    const updatedOrder = await OrderModel.findByID(id);
+
+    return {
+      message: "La orden pasó al estado PROCESADO correctamente.",
+      order: updatedOrder,
+    };
+  } catch (error) {
+    console.error("Error al intentar procesar la orden:", error);
+    if (error.status) throw error;
+    throw createError(500, "Error interno al intentar procesar la orden.");
+  }
+};
+// Orden enviada
+export const orderShippedService = async (id, shipData) => {
+  let connection;
+
+  try {
+    /*
+      0. Abrimos la conexión exclusiva y la transacción.
+      Todo lo que pase desde aquí hasta el commit debe ser atómico.
+    */
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    // 1. Buscamos la orden por ID
+    const order = await OrderModel.findByID(id);
+    if (!order) throw createError(400, "La orden solicitada no fue encontrada");
+
+    // 2. Validación de estados NO permitidos
+    const invalidStates = ["cancelado", "entregado", "enviado"];
+    if (invalidStates.includes(order.estado.toLowerCase())) {
+      throw createError(
+        400,
+        `No se puede asignar el estado 'enviado' a una orden con estado: ${order.estado}`
+      );
+    }
+
+    /*
+      3. VALIDACIÓN DE FECHAS
+      Convertimos a objetos Date reales y verificamos su consistencia.
+    */
+    const { fecha_envio, fecha_entrega } = shipData;
+
+    const envioDate = fecha_envio ? new Date(fecha_envio) : null;
+    const entregaDate = fecha_entrega ? new Date(fecha_entrega) : null;
+    const orderDate = new Date(order.fecha_pedido);
+
+    // 3.1 Fecha válida
+    if (fecha_envio && isNaN(envioDate.getTime())) {
+      throw createError(400, "La fecha de envío es inválida.");
+    }
+    if (fecha_entrega && isNaN(entregaDate.getTime())) {
+      throw createError(400, "La fecha de entrega es inválida.");
+    }
+
+    // 3.2 fecha_envio >= fecha_pedido
+    if (envioDate && envioDate < orderDate) {
+      throw createError(
+        400,
+        "La fecha de envío no puede ser anterior a la fecha del pedido."
+      );
+    }
+
+    // 3.3 fecha_entrega >= fecha_envio
+    if (envioDate && entregaDate && entregaDate < envioDate) {
+      throw createError(
+        400,
+        "La fecha de entrega no puede ser anterior a la fecha de envío."
+      );
+    }
+
+    /*
+      4. Actualizamos el estado del pedido a "enviado".
+      Esto ocurre DENTRO de la misma transacción.
+    */
+    await OrderModel.update(id, { estado: "enviado" }, connection);
+
+    // 5. Creamos la información de envío (pedido_envio)
+    // Todo se agrega dentro de la transacción.
+    const createdShippedData = await OrderShippingModel.createShippingData(
+      { ...shipData, idPedido: id },
+      connection
+    );
+
+    //6. Si llegamos a este punto es porque no hubo errores  entonces hacemos COMMIT
+
+    await connection.commit();
+
+    // 7. Obtenemos la orden actualizada (fuera del flujo crítico de la transacción)
+
+    const updatedOrder = await OrderModel.findByID(id);
+
+    // 8. Enviamos email AL FINAL (FUERA del commit).
+    //  Si falla el email → NO afecta la transacción.
+
+    try {
+      const user = await UserModel.findByID(order.idUsuario);
+
+      const emailContent = {
+        title: "¡Tu pedido ha sido enviado!",
+        message:
+          "Tu envío está en camino. Puedes ver el estado de tu compra en el siguiente enlace.",
+        link: {
+          linkURL: "http://localhost:3001/mis-compras",
+          linkText: "Ver mi pedido",
+        },
+      };
+
+      await sendEmailService(
+        user.email,
+        "Tu pedido ha sido enviado",
+        emailContent
+      );
+    } catch (emailError) {
+      console.error(
+        "Error al enviar mail, pero la transacción fue exitosa:",
+        error
+      );
+    }
+
+    // 9. Devolvemos respuesta final
+    return {
+      updatedOrder,
+      shippedData: createdShippedData,
+    };
+  } catch (error) {
+    /*
+      10. Si hubo un error hacemos el rollback.
+    */
+    if (connection) await connection.rollback();
+
+    if (error.status) throw error;
+
+    console.error("Error en envío:", error);
+    throw createError(
+      500,
+      "Error interno al intentar marcar la orden como enviada."
+    );
+  } finally {
+    /*
+      11. Liberamos la conexion
+    */
+    if (connection) connection.release();
+  }
+};
+
+//Orden entregada
+export const orderDeliveredService = async (id, deliveryData) => {
+  let connection;
+
+  try {
+    // 0. Crear conexión y abrir la transacción
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    // 1. Buscar el pedido por ID
+    const order = await OrderModel.findByID(id);
+    if (!order) throw createError(404, "La orden no fue encontrada.");
+
+    // 2. Validar que el pedido esté ENVIADO
+    if (order.estado.toLowerCase() !== "enviado") {
+      throw createError(
+        400,
+        `La orden no puede marcarse como ENTREGADA porque está en estado: ${order.estado}`
+      );
+    }
+
+    // 3. Obtener los datos actuales del envío (pedido_envio)
+    const envioData = await OrderShippingModel.findShippingByOrderId(id);
+    if (!envioData) {
+      throw createError(
+        400,
+        "No existe información de envío asociada al pedido. No puede marcarse como entregado."
+      );
+    }
+
+    // 4. Extraemos la fecha_entrega enviada por el front (en el futuro api.)
+    const { fecha_entrega } = deliveryData;
+
+    // 5. Convertimos fechas en objetos Date
+    const envioDate = new Date(envioData.fecha_envio); // FECHA REAL EN BD
+    const entregaDate = fecha_entrega ? new Date(fecha_entrega) : new Date();
+    const pedidoDate = new Date(order.fecha_pedido); // FECHA DEL PEDIDO EN BD
+
+    // 6. Validaciones de fechas
+    if (isNaN(entregaDate.getTime())) {
+      //Esto verifica si es una fecha invalida o no.
+      throw createError(400, "La fecha de entrega es inválida.");
+    }
+
+    if (entregaDate < pedidoDate) {
+      throw createError(
+        400,
+        "La fecha de entrega no puede ser anterior a la fecha del pedido."
+      );
+    }
+
+    if (entregaDate < envioDate) {
+      throw createError(
+        400,
+        "La fecha de entrega no puede ser anterior a la fecha de envío."
+      );
+    }
+
+    // 7. Actualizamos estado del pedido a ENTREGADO
+    await OrderModel.update(id, { estado: "entregado" }, connection);
+
+    // 8. Actualizamos información en pedido_envio
+    await OrderShippingModel.updateShippingData(
+      id,
+      {
+        estado_envio: "entregado",
+        fecha_entrega: entregaDate,
+      },
+      connection
+    );
+
+    // 9. COMMIT si  Todo salió bien
+    await connection.commit();
+
+    // 10. Buscamos el pedido actualizado para devolverlo al cliente
+    const updatedOrder = await OrderModel.findByID(id);
+
+    // 11. Envío de email FUERA de la transacción
+    try {
+      const user = await UserModel.findByID(order.idUsuario);
+
+      const emailContent = {
+        title: "¡Tu pedido fue entregado!",
+        message: "Gracias por confiar en nosotros. Tu compra ya llegó.",
+        link: {
+          linkURL: "http://localhost:3001/mis-compras",
+          linkText: "Ver mi pedido",
+        },
+      };
+
+      await sendEmailService(user.email, "Pedido entregado", emailContent);
+    } catch (emailError) {
+      console.error("Error al enviar email de entrega:", emailError);
+    }
+
+    return {
+      message: "La orden fue marcada como ENTREGADA correctamente.",
+      order: updatedOrder,
+    };
+  } catch (error) {
+    // 12. Si algo falla, revertimos la transacción
+    if (connection) await connection.rollback();
+
+    if (error.status) throw error;
+
+    console.error("Error en entrega:", error);
+    throw createError(
+      500,
+      "Error interno al intentar marcar la orden como entregada."
+    );
+  } finally {
+    // 13. Liberamos la conexión
+    if (connection) connection.release();
+  }
+};

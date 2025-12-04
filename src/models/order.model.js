@@ -307,4 +307,40 @@ export const OrderModel = {
       throw error;
     }
   },
+
+  /* 
+  MÉTODOS PARA EL CAMBIO DE ESTADO DE PEDIDOS
+  */
+
+  // MÉTODO PARA ACTUALIZAR EL PEDIDO.
+
+  async update(id, updateData, connection = pool) {
+    try {
+      //conection o pool comun.
+      if (!updateData || Object.keys(updateData).length === 0) {
+        throw createError(
+          400,
+          "No se enviaron datos para actualizar el producto."
+        );
+      }
+
+      const fields = Object.keys(updateData); //Array de objetos
+      const values = Object.values(updateData);
+
+      const setData = fields.map((field) => `${field} = ?`).join(", ");
+      const sql = `UPDATE ${this.tablename} SET ${setData} WHERE ${this.fields.id} = ?`;
+
+      const [result] = await connection.execute(sql, [...values, id]); //Copio array de objetos como primer parametro
+
+      if (result.affectedRows === 0) {
+        throw createError(404, "No se encontro la orden a actualizar.");
+      }
+
+      return result.affectedRows > 0; //True si modifico y false sino modifico.
+    } catch (error) {
+      if (error.status) throw error;
+      console.log(error);
+      throw createError(500, "Error al intentar actualizar el pedido");
+    }
+  },
 };

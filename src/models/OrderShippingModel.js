@@ -1,18 +1,14 @@
 import { pool } from "../db.js";
 import { createError } from "../utils/utils.js";
 
-/* 
-  Este modelo se encarga de manejar TODAS las consultas relacionadas
-  al envío del pedido. 
-  Este modelo SIEMPRE se usa junto con OrderModel.
-
+/*
+  Este modelo maneja TODA la tabla pedido_envio.
+  Se usa SIEMPRE junto a OrderModel, pero nunca se mezcla.
 */
 
 export const OrderShippingModel = {
-  // Nombre de la tabla
   tablename: "pedido_envio",
 
-  // Campos de la tabla
   fields: {
     idEnvio: "idEnvio",
     idPedido: "idPedido",
@@ -24,9 +20,11 @@ export const OrderShippingModel = {
     estado_envio: "estado_envio",
   },
 
-  async createOrderShippedData(
+  /*
+    CREA el registro de envío cuando la orden pasa a “enviado”.
+  */
+  async createShippingData(
     {
-      // Desestructuración del objeto...
       fecha_entrega = null,
       fecha_envio = null,
       costo_envio = 0,
@@ -38,32 +36,34 @@ export const OrderShippingModel = {
     connection = pool
   ) {
     try {
-      // EN EL MODELO HACERLO DE FORMA DINÁMICA:
+      const columns = Object.values(this.fields).filter(
+        (field) => field !== this.fields.idEnvio
+      );
+
+      const placeholders = columns.map(() => "?").join(", ");
 
       const values = [
-        fecha_entrega,
+        idPedido,
         fecha_envio,
+        fecha_entrega,
         costo_envio,
         codigo_seguimiento,
         metodo_envio,
         estado_envio,
-        idPedido,
       ];
 
-      const sql = `INSERT INTO pedido_envio (fecha_entrega,fecha_envio,costo_envio,codigo_seguimiento,metodo_envio,estado_envio,idPedido)
-       VALUES (?,?,?,?,?,?,?)`;
+      const sql = `
+        INSERT INTO ${this.tablename}
+          (idPedido, fecha_envio, fecha_entrega, costo_envio, codigo_seguimiento, metodo_envio, estado_envio)
+        VALUES (${placeholders})
+      `;
 
-      console.log("VALUES", values);
-
-      //
       const [result] = await connection.execute(sql, values);
-
-      // Retornamos el ID que es autoincremental generado por la BD.
-      const orderShippedDataId = result.insertId;
+      const insertedId = result.insertId;
 
       const [rows] = await connection.execute(
-        `SELECT * FROM pedido_envio WHERE idEnvio = ?`,
-        [orderShippedDataId]
+        `SELECT * FROM ${this.tablename} WHERE idEnvio = ?`,
+        [insertedId]
       );
 
       return rows[0];
@@ -77,41 +77,61 @@ export const OrderShippingModel = {
     }
   },
 
-  async updateOrderShippedData(id, updateData, connection = pool) {
+  /*
+    ACTUALIZA dinámicamente cualquier campo del envío
+    según el ID del pedido.
+  */
+  async updateShippingData(idPedido, updateData, connection = pool) {
     try {
-      //conection o pool comun.
       if (!updateData || Object.keys(updateData).length === 0) {
         throw createError(
           400,
-          "No se enviaron datos para actualizar el producto."
+          "No se enviaron datos para actualizar la información de envío."
         );
       }
 
-      const fields = Object.keys(updateData); //Array de objetos
+      const fields = Object.keys(updateData);
       const values = Object.values(updateData);
 
       const setData = fields.map((field) => `${field} = ?`).join(", ");
-      const sql = `UPDATE pedido_envio SET ${setData} WHERE idPedido = ?`;
 
-      const [result] = await connection.execute(sql, [...values, id]); //Copio array de objetos como primer parametro
+      const sql = `
+        UPDATE ${this.tablename}
+        SET ${setData}
+        WHERE idPedido = ?
+      `;
+
+      const [result] = await connection.execute(sql, [...values, idPedido]);
 
       if (result.affectedRows === 0) {
-        throw createError(404, "No se encontro la orden a actualizar.");
+        throw createError(
+          404,
+          "No existe información de envío asociada a esta orden."
+        );
       }
 
-      return result.affectedRows > 0; //True si modifico y false sino modifico.
+      return true;
     } catch (error) {
       if (error.status) throw error;
       console.log(error);
-      throw createError(500, "Error al intentar actualizar el pedido");
+      throw createError(
+        500,
+        "Error al intentar actualizar la información del envío."
+      );
     }
   },
 
-  //Muestra los datos del envío asociados a un pedido. Es util si el admin quiere ver información completa del envío.
-  async findByOrderId(idPedido) {
+  /*
+    OBTIENE la información de envío de una orden.
+    Se usa en:
+      - shippedService (para evitar duplicados)
+      - deliveredService (para validar entregas)
+      - admin (para ver la info completa)
+  */
+  async findShippingByOrderId(idPedido) {
     try {
       const sql = `
-        SELECT * 
+        SELECT *
         FROM ${this.tablename}
         WHERE idPedido = ?
       `;
@@ -119,7 +139,7 @@ export const OrderShippingModel = {
       const [rows] = await pool.execute(sql, [idPedido]);
       return rows[0] || null;
     } catch (error) {
-      console.log("Error al buscar datos del envío por ID de pedido:", error);
+      console.log("Error al obtener datos de envío:", error);
       throw createError(
         500,
         "Error al obtener la información del envío para este pedido."
@@ -127,5 +147,3 @@ export const OrderShippingModel = {
     }
   },
 };
-
-//Hay que seguir creando los metodos para actualizar a los diferentes estados en la BD.
